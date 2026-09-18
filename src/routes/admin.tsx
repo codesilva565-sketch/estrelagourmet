@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import {
   addProductImage,
+  addProductImageUrl,
   deleteProductImage,
   getAdminCatalog,
   saveProduct,
@@ -441,10 +442,14 @@ function ProductEditor({
 }) {
   const save = useServerFn(saveProduct);
   const addImage = useServerFn(addProductImage);
+  const addImageUrl = useServerFn(addProductImageUrl);
   const removeImage = useServerFn(deleteProductImage);
   const [form, setForm] = useState(product);
   const [features, setFeatures] = useState(product.features.join("\n"));
   const [busy, setBusy] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([]);
+  const [urlInput, setUrlInput] = useState("");
   const isNew = !product.id;
   function set<K extends keyof AdminProduct>(key: K, value: AdminProduct[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -457,11 +462,83 @@ function ProductEditor({
       ),
     );
   }
+  function validateFile(file: File): string | null {
+    if (!file.type.match(/^image\/(jpeg|png|webp|avif)$/))
+      return "Formato não suportado. Use JPG, PNG, WEBP ou AVIF.";
+    if (file.size > 8 * 1024 * 1024) return "Imagem muito grande. Máximo 8 MB.";
+    return null;
+  }
+  function handleFileSelect(files: FileList | null) {
+    if (!files) return;
+    const valid: File[] = [];
+    for (const file of Array.from(files)) {
+      const error = validateFile(file);
+      if (error) { toast.error(error); continue; }
+      if (valid.length >= 8) { toast.error("Máximo 8 imagens por vez."); break; }
+      valid.push(file);
+    }
+    if (valid.length === 0) return;
+    setPendingFiles((prev) => [...prev, ...valid]);
+    const newPreviews = valid.map((file) => URL.createObjectURL(file));
+    setPendingPreviews((prev) => [...prev, ...newPreviews]);
+  }
+  function removePendingFile(index: number) {
+    URL.revokeObjectURL(pendingPreviews[index]);
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    setPendingPreviews((prev) => prev.filter((_, i) => i !== index));
+  }
+  async function handleAddUrl() {
+    const url = urlInput.trim();
+    if (!url) { toast.error("Informe uma URL válida."); return; }
+    try { new URL(url); } catch { toast.error("URL inválida."); return; }
+    if (!form.id) { toast.error("Salve o produto antes de adicionar imagem por URL."); return; }
+    setBusy(true);
+    try {
+      await addImageUrl({
+        data: {
+          productId: form.id,
+          imageUrl: url,
+          altText: form.name || "Produto",
+          displayOrder: form.product_images.length,
+        },
+      });
+      toast.success("Imagem adicionada.");
+      setUrlInput("");
+      await onSaved();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao adicionar imagem.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function uploadPendingFiles(productId: string) {
+    if (pendingFiles.length === 0) return;
+    for (let i = 0; i < pendingFiles.length; i++) {
+      const file = pendingFiles[i];
+      const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      const path = `${productId}/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage
+        .from("catalog-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (error) throw error;
+      await addImage({
+        data: {
+          productId,
+          path,
+          altText: form.name || "Produto",
+          displayOrder: i,
+        },
+      });
+    }
+    pendingPreviews.forEach((p) => URL.revokeObjectURL(p));
+    setPendingFiles([]);
+    setPendingPreviews([]);
+  }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     try {
-      await save({
+      const result = await save({
         data: {
           id: form.id || undefined,
           category_id: form.category_id,
@@ -487,6 +564,10 @@ function ProductEditor({
           })),
         },
       });
+      const productId = result?.id ?? form.id;
+      if (isNew && productId) {
+        await uploadPendingFiles(productId);
+      }
       toast.success("Produto salvo.");
       await onSaved();
     } catch (error) {
@@ -500,14 +581,14 @@ function ProductEditor({
     setBusy(true);
     try {
       for (const file of Array.from(files).slice(0, 8)) {
-        if (!file.type.match(/^image\/(jpeg|png|webp|avif)$/) || file.size > 8 * 1024 * 1024)
-          throw new Error("Use imagens JPG, PNG, WEBP ou AVIF de até 8 MB.");
+        const error = validateFile(file);
+        if (error) throw new Error(error);
         const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
         const path = `${form.id}/${crypto.randomUUID()}.${extension}`;
-        const { error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("catalog-images")
           .upload(path, file, { contentType: file.type, upsert: false });
-        if (error) throw error;
+        if (uploadError) throw uploadError;
         await addImage({
           data: {
             productId: form.id,
@@ -727,47 +808,100 @@ function ProductEditor({
       </section>
       <section className="rounded-lg border border-border bg-card p-4 sm:p-6">
         <h3 className="font-display text-2xl font-semibold">Fotografias</h3>
-        {isNew ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Salve o produto antes de enviar fotografias.
-          </p>
-        ) : (
-          <>
-            <Label className="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground">
-              <ImagePlus className="h-4 w-4" /> Enviar fotografias
-              <Input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/avif"
-                multiple
-                className="sr-only"
-                onChange={(e) => void upload(e.target.files)}
-              />
-            </Label>
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {form.product_images.map((image) => (
-                <div
-                  key={image.id}
-                  className="relative aspect-square overflow-hidden rounded-md bg-secondary"
+        {/* Existing images */}
+        {form.product_images.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {form.product_images.map((image) => (
+              <div
+                key={image.id}
+                className="relative aspect-square overflow-hidden rounded-md bg-secondary"
+              >
+                <img
+                  src={image.signed_url ?? image.image_url}
+                  alt={image.alt_text}
+                  className="h-full w-full object-cover"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute right-1 top-1"
+                  onClick={() => void removePhoto(image.id, image.image_url)}
                 >
-                  <img
-                    src={image.signed_url ?? ""}
-                    alt={image.alt_text}
-                    className="h-full w-full object-cover"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="absolute right-1 top-1"
-                    onClick={() => void removePhoto(image.id, image.image_url)}
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </>
+                  <Trash2 />
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
+        {/* Pending file previews (new product, before save) */}
+        {pendingPreviews.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {pendingPreviews.map((preview, index) => (
+              <div
+                key={`pending-${index}`}
+                className="relative aspect-square overflow-hidden rounded-md bg-secondary"
+              >
+                <img
+                  src={preview}
+                  alt={`Pré-visualização ${index + 1}`}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-1 py-0.5 text-center text-[10px] text-white">
+                  Aguardando salvar
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute right-1 top-1"
+                  onClick={() => removePendingFile(index)}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* File upload button */}
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
+            <ImagePlus className="h-4 w-4" /> Adicionar foto
+            <Input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              multiple
+              className="sr-only"
+              onChange={(e) => {
+                handleFileSelect(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </Label>
+          {/* URL input as alternative */}
+          <div className="flex flex-1 items-center gap-2">
+            <Input
+              type="url"
+              placeholder="Ou cole a URL da imagem"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              className="h-9 flex-1 text-sm"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleAddUrl()}
+              disabled={busy || !urlInput.trim()}
+            >
+              <Plus className="h-4 w-4" /> URL
+            </Button>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Formatos: JPG, PNG, WEBP, AVIF. Máximo 8 MB por imagem.
+          {isNew && " As imagens serão enviadas ao salvar o produto."}
+        </p>
       </section>
     </form>
   );

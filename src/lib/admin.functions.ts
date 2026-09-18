@@ -147,6 +147,30 @@ export const addProductImage = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const addProductImageUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        productId: z.string().uuid(),
+        imageUrl: z.string().url().max(2000),
+        altText: z.string().trim().max(200),
+        displayOrder: z.number().int().min(0).max(999),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase.from("product_images").insert({
+      product_id: data.productId,
+      image_url: data.imageUrl,
+      alt_text: data.altText,
+      display_order: data.displayOrder,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const deleteProductImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
