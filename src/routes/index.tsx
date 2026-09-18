@@ -93,29 +93,19 @@ function HomePage() {
         <SiteHeader logoUrl={settings.logo_url} variant="home" />
 
         <main>
-          {/* Hero */}
+          {/* Hero — Grid 42% texto | 58% foto */}
           <section className="eg-hero" aria-label="Apresentação Estrela Gourmet">
-            <div
-              className="eg-hero-image"
-              style={{ backgroundImage: `url('${HERO}')` }}
-              aria-hidden="true"
-            />
             <div className="eg-hero-copy">
               <h1>
-                Pequenos
-                <br />
-                detalhes,
-                <br />
-                <em>grandes</em>
-                <br />
+                Pequenos<br />
+                detalhes,<br />
+                <em>grandes</em><br />
                 <em>momentos</em>
                 <span className="eg-hand-heart">♡</span>
               </h1>
               <p>
-                BRIGADEIROS QUE
-                <br />
-                TORNAM A VIDA
-                <br />
+                BRIGADEIROS QUE<br />
+                TORNAM A VIDA<br />
                 MAIS DOCE!
               </p>
               <button
@@ -124,19 +114,15 @@ function HomePage() {
                   document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" })
                 }
               >
-                <MessageCircle size={20} strokeWidth={1.8} /> FAÇA SUA ENCOMENDA{" "}
-                <ArrowRight size={18} />
+                <MessageCircle size={20} strokeWidth={1.8} /> FAÇA SUA ENCOMENDA <ArrowRight size={18} />
               </button>
             </div>
-            <p className="eg-hero-handwritten">
-              Sabor
-              <br />
-              que cria
-              <br />
-              boas
-              <br />
-              histórias ♡
-            </p>
+            <div className="eg-hero-image" aria-hidden="true">
+              <img src={HERO} alt="" className="h-full w-full object-cover" />
+              <p className="eg-hero-handwritten">
+                Sabor<br />que cria<br />boas<br />histórias ♡
+              </p>
+            </div>
           </section>
 
           {/* Categories */}
