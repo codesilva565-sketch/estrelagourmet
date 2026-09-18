@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  ArrowRight,
   CakeSlice,
   ChevronLeft,
   ChevronRight,
@@ -11,7 +12,7 @@ import {
   Plus,
   ShoppingBag,
 } from "lucide-react";
-import { getProduct } from "@/lib/catalog.functions";
+import { getProduct, getCatalog } from "@/lib/catalog.functions";
 import { useInterest } from "@/lib/interest-context";
 import type { Product } from "@/lib/catalog.types";
 import { toast } from "sonner";
@@ -23,13 +24,19 @@ function formatBRL(value: number | null) {
 }
 
 export const Route = createFileRoute("/produto/$slug")({
-  loader: async ({ params }) => getProduct({ data: { slug: params.slug } }),
+  loader: async ({ params }) => {
+    const [product, catalog] = await Promise.all([
+      getProduct({ data: { slug: params.slug } }),
+      getCatalog(),
+    ]);
+    return { product, settings: catalog.settings };
+  },
   head: ({ loaderData }) => ({
     meta: [
-      { title: loaderData ? `${loaderData.name} — Estrela Gourmet` : "Produto — Estrela Gourmet" },
+      { title: loaderData.product ? `${loaderData.product.name} — Estrela Gourmet` : "Produto — Estrela Gourmet" },
       {
         name: "description",
-        content: loaderData?.short_description || "Detalhes do produto artesanal Estrela Gourmet.",
+        content: loaderData.product?.short_description || "Detalhes do produto artesanal Estrela Gourmet.",
       },
     ],
   }),
@@ -37,12 +44,12 @@ export const Route = createFileRoute("/produto/$slug")({
 });
 
 function ProductPage() {
-  const product = Route.useLoaderData();
+  const { product, settings } = Route.useLoaderData();
   if (!product) return null;
-  return <ProductDetail product={product} />;
+  return <ProductDetail product={product} settings={settings} />;
 }
 
-function ProductDetail({ product }: { product: Product }) {
+function ProductDetail({ product, settings }: { product: Product; settings?: { whatsapp_number?: string } }) {
   const { addItem, items } = useInterest();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [variantId, setVariantId] = useState(
@@ -69,6 +76,13 @@ function ProductDetail({ product }: { product: Product }) {
     toast.success("Produto adicionado à lista de interesse.");
   }
 
+  function openWhatsApp() {
+    const whatsapp = settings?.whatsapp_number || "5567999438984";
+    const variationText = selectedVariation ? ` (${selectedVariation.name})` : "";
+    const msg = `Olá! Tudo bem? 💗\n\nTenho interesse no produto: *${product.name}${variationText}*\nQuantidade: ${quantity}\n\nPoderiam me informar a disponibilidade e o valor?`;
+    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <div className="eg-site">
       <div className="eg-page">
@@ -85,16 +99,16 @@ function ProductDetail({ product }: { product: Product }) {
             >
               <ChevronLeft size={21} />
             </Link>
-            <button
-              className="eg-icon-button eg-header-heart"
+            <Link
+              to="/interesse"
+              className="eg-icon-button eg-bag"
               aria-label="Lista de interesse"
-              onClick={() => {}}
             >
               <ShoppingBag size={22} />
               {items.length > 0 && (
                 <span className="eg-bag-count">{items.length}</span>
               )}
-            </button>
+            </Link>
           </div>
         </header>
 
@@ -239,6 +253,13 @@ function ProductDetail({ product }: { product: Product }) {
                 onClick={addToInterest}
               >
                 <MessageCircle size={21} /> Tenho interesse <ArrowRight size={18} />
+              </button>
+              <button
+                className="eg-detail-cta eg-detail-whatsapp"
+                disabled={!product.is_available}
+                onClick={openWhatsApp}
+              >
+                <MessageCircle size={21} /> Fazer pedido agora
               </button>
               <p className="eg-detail-disclaimer">
                 Consulta sem compromisso. A disponibilidade e o valor serão confirmados pela

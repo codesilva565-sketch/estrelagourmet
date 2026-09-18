@@ -346,7 +346,7 @@ img { display: block; max-width: 100%; }
   box-shadow: 0 6px 14px #8e3e3b1c;
   color: white; padding: 12px 20px;
   font-size: 12px; letter-spacing: .05em; font-weight: 600;
-  white-space: nowrap;
+  white-space: nowrap; cursor: pointer;
 }
 .eg-hero-cta:hover, .eg-card-cta:hover, .eg-detail-cta:hover, .eg-send:hover {
   filter: brightness(.94);
@@ -649,7 +649,16 @@ img { display: block; max-width: 100%; }
   background: #c87779; color: white; width: 100%;
   padding: 13px;
   font: 600 17px 'Cormorant Garamond', serif;
+  cursor: pointer; transition: opacity .15s;
 }
+.eg-detail-cta:hover { opacity: .88; }
+.eg-detail-cta:disabled { opacity: .45; cursor: not-allowed; }
+.eg-detail-whatsapp {
+  background: #25d366;
+}
+.eg-detail-whatsapp:hover { background: #1fb855; }
+.eg-send { background: #25d366; }
+.eg-send:hover { background: #1fb855; }
 .eg-detail-disclaimer {
   font-size: 11px; line-height: 1.55;
   color: #98776c; margin-top: 10px;

@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/sobre")({
   head: () => ({
@@ -10,34 +9,38 @@ export const Route = createFileRoute("/sobre")({
         name: "description",
         content: "Conheça a Estrela Gourmet, confeitaria artesanal de Vicentina, MS.",
       },
-      { property: "og:title", content: "Sobre nós — Estrela Gourmet" },
-      {
-        property: "og:description",
-        content: "Doces artesanais feitos com cuidado em Vicentina, MS.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: About,
 });
+
 function About() {
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-5 py-8">
-      <Button variant="ghost" size="icon" asChild>
-        <Link to="/">
-          <ArrowLeft />
-        </Link>
-      </Button>
-      <p className="mt-14 font-script text-4xl text-primary">Estrela Gourmet</p>
-      <h1 className="font-display text-5xl font-semibold">Sobre nós</h1>
-      <div className="mt-8 border-y border-gold/50 py-10">
-        <Heart className="h-8 w-8 text-primary" />
-        <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
-          A história oficial da confeitaria será apresentada aqui com as palavras e fotografias
-          reais da proprietária.
-        </p>
+    <div className="eg-site">
+      <div className="eg-page">
+        <header className="eg-header eg-header-detail">
+          <div className="eg-brand">
+            <span className="eg-brand-name">Estrela Gourmet</span>
+          </div>
+          <div className="eg-header-actions">
+            <Link to="/" className="eg-icon-button" aria-label="Voltar ao catálogo">
+              <ArrowLeft size={21} />
+            </Link>
+          </div>
+        </header>
+        <main className="eg-detail">
+          <div style={{ maxWidth: 540, margin: "0 auto", padding: "20px 0" }}>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(28px,5vw,42px)", color: "#794a40", marginBottom: 8 }}>Sobre nós</h1>
+            <div style={{ borderTop: "1px solid #e7ceca", borderBottom: "1px solid #e7ceca", padding: "32px 0", marginTop: 16 }}>
+              <Heart size={28} color="#c87779" />
+              <p style={{ marginTop: 16, fontSize: 17, lineHeight: 1.7, color: "#6d4b43" }}>
+                A história oficial da confeitaria será apresentada aqui com as palavras e fotografias
+                reais da proprietária.
+              </p>
+            </div>
+          </div>
+        </main>
       </div>
-    </main>
+    </div>
   );
 }
