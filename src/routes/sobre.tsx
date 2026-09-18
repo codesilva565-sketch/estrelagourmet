@@ -4,10 +4,10 @@ import { ArrowLeft, Heart } from "lucide-react";
 export const Route = createFileRoute("/sobre")({
   head: () => ({
     meta: [
-      { title: "Sobre nós — Estrela Gourmet" },
+      { title: "Sobre nós — Estela Gourmet" },
       {
         name: "description",
-        content: "Conheça a Estrela Gourmet, confeitaria artesanal de Vicentina, MS.",
+        content: "Conheça a Estela Gourmet, confeitaria artesanal de Vicentina, MS.",
       },
     ],
   }),
@@ -20,7 +20,7 @@ function About() {
       <div className="eg-page">
         <header className="eg-header eg-header-detail">
           <div className="eg-brand">
-            <span className="eg-brand-name">Estrela Gourmet</span>
+            <span className="eg-brand-name">Estela Gourmet</span>
           </div>
           <div className="eg-header-actions">
             <Link to="/" className="eg-icon-button" aria-label="Voltar ao catálogo">

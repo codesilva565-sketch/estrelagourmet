@@ -10,9 +10,9 @@ export const Route = createFileRoute("/reset-password")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Criar nova senha — Estrela Gourmet" },
+      { title: "Criar nova senha — Estela Gourmet" },
       { name: "description", content: "Crie uma nova senha para a área administrativa." },
-      { property: "og:title", content: "Criar nova senha — Estrela Gourmet" },
+      { property: "og:title", content: "Criar nova senha — Estela Gourmet" },
       { property: "og:description", content: "Recuperação segura de acesso administrativo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

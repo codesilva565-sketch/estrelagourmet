@@ -172,3 +172,34 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+const categorySchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(60),
+  slug: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80),
+  icon: z.string().trim().max(60).nullable(),
+  display_order: z.number().int().min(0).max(999),
+});
+
+export const saveCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => categorySchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { id, ...values } = data;
+    const result = id
+      ? await context.supabase.from("categories").update(values).eq("id", id).select("id").single()
+      : await context.supabase.from("categories").insert(values).select("id").single();
+    if (result.error || !result.data) throw new Error(result.error?.message ?? "Não foi possível salvar a categoria.");
+    return { id: result.data.id };
+  });
+
+export const deleteCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase.from("categories").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

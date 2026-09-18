@@ -79,13 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Estrela Gourmet — Brigadeiros artesanais" },
+      { title: "Estela Gourmet — Brigadeiros artesanais" },
       {
         name: "description",
         content: "Catálogo de brigadeiros gourmet artesanais em Vicentina, MS.",
       },
-      { name: "author", content: "Estrela Gourmet" },
-      { property: "og:title", content: "Estrela Gourmet" },
+      { name: "author", content: "Estela Gourmet" },
+      { property: "og:title", content: "Estela Gourmet" },
       {
         property: "og:description",
         content: "Brigadeiros gourmet feitos com amor em Vicentina, MS.",

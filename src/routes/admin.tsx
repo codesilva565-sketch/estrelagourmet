@@ -9,10 +9,12 @@ import {
   Loader2,
   LogOut,
   PackagePlus,
+  Pencil,
   Plus,
   Save,
   Settings,
   Store,
+  Tags,
   Trash2,
   X,
 } from "lucide-react";
@@ -37,6 +39,8 @@ import {
   getAdminCatalog,
   saveProduct,
   saveSiteSettings,
+  saveCategory,
+  deleteCategory,
 } from "@/lib/admin.functions";
 import type { Category, Product, ProductVariation, SiteSettings } from "@/lib/catalog.types";
 
@@ -44,13 +48,13 @@ export const Route = createFileRoute("/admin")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Área da proprietária — Estrela Gourmet" },
+      { title: "Área da proprietária — Estela Gourmet" },
       {
         name: "description",
-        content: "Acesso seguro para administrar o catálogo Estrela Gourmet.",
+        content: "Acesso seguro para administrar o catálogo Estela Gourmet.",
       },
-      { property: "og:title", content: "Área da proprietária — Estrela Gourmet" },
-      { property: "og:description", content: "Administração segura do catálogo Estrela Gourmet." },
+      { property: "og:title", content: "Área da proprietária — Estela Gourmet" },
+      { property: "og:description", content: "Administração segura do catálogo Estela Gourmet." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex,nofollow" },
@@ -172,7 +176,7 @@ function LoginForm() {
             <ArrowLeft />
           </Link>
         </Button>
-        <p className="mt-5 font-script text-4xl text-primary">Estrela Gourmet</p>
+        <p className="mt-5 font-script text-4xl text-primary">Estela Gourmet</p>
         <h1 className="font-display text-4xl font-semibold">Área da proprietária</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Entre para editar produtos, fotos e informações do catálogo.
@@ -280,7 +284,7 @@ function Dashboard({
       <header className="border-b border-border bg-card">
         <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-4 sm:flex sm:justify-between sm:px-6">
           <div className="min-w-0">
-            <p className="truncate font-script text-3xl text-primary">Estrela Gourmet</p>
+            <p className="truncate font-script text-3xl text-primary">Estela Gourmet</p>
             <h1 className="truncate font-display text-2xl font-semibold">Painel do catálogo</h1>
           </div>
           <div className="flex shrink-0 gap-1">
@@ -297,14 +301,18 @@ function Dashboard({
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <Tabs defaultValue="products">
-          <TabsList className="grid h-11 w-full grid-cols-2 sm:w-auto">
+          <TabsList className="grid h-11 w-full grid-cols-3 sm:w-auto">
             <TabsTrigger value="products">
               <Store className="mr-2 h-4 w-4" />
               Produtos
             </TabsTrigger>
+            <TabsTrigger value="categories">
+              <Tags className="mr-2 h-4 w-4" />
+              Categorias
+            </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="mr-2 h-4 w-4" />
-              Configurações
+              Config
             </TabsTrigger>
           </TabsList>
           <TabsContent value="products" className="mt-6">
@@ -325,6 +333,9 @@ function Dashboard({
                 onNew={() => setSelected(blankProduct())}
               />
             )}
+          </TabsContent>
+          <TabsContent value="categories" className="mt-6">
+            <CategoryManager categories={data.categories} onSaved={refresh} />
           </TabsContent>
           <TabsContent value="settings" className="mt-6">
             <SettingsForm settings={data.settings} onSaved={refresh} />
@@ -772,7 +783,7 @@ function SettingsForm({
   const save = useServerFn(saveSiteSettings);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
-    business_name: settings?.business_name ?? "Estrela Gourmet",
+    business_name: settings?.business_name ?? "Estela Gourmet",
     whatsapp_number: settings?.whatsapp_number ?? "",
     instagram_url: settings?.instagram_url ?? "",
     contact_info: settings?.contact_info ?? "",
@@ -875,4 +886,171 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+function CategoryManager({
+  categories,
+  onSaved,
+}: {
+  categories: Category[];
+  onSaved: () => Promise<void>;
+}) {
+  const save = useServerFn(saveCategory);
+  const remove = useServerFn(deleteCategory);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  function blank() {
+    return { id: "", name: "", slug: "", icon: null, display_order: categories.length } as Category;
+  }
+
+  async function handleSave(cat: Category) {
+    setBusy(true);
+    try {
+      await save({ data: cat });
+      toast.success("Categoria salva.");
+      await onSaved();
+      setEditing(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!window.confirm(`Excluir a categoria "${name}"?`)) return;
+    setBusy(true);
+    try {
+      await remove({ data: { id } });
+      toast.success("Categoria excluída.");
+      await onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao excluir.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <CategoryEditor
+        category={editing.id ? editing : blank()}
+        isNew={!editing.id}
+        onSave={handleSave}
+        onCancel={() => setEditing(null)}
+        busy={busy}
+      />
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display text-3xl font-semibold">Categorias</h2>
+          <p className="text-sm text-muted-foreground">{categories.length} cadastrada(s)</p>
+        </div>
+        <Button onClick={() => setEditing(blank())}>
+          <Plus /> Nova categoria
+        </Button>
+      </div>
+      <div className="grid gap-3">
+        {categories.map((cat) => (
+          <div
+            key={cat.id}
+            className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border border-border rounded-lg bg-card p-3"
+          >
+            <div>
+              <p className="font-display text-lg font-semibold">{cat.name}</p>
+              <p className="text-xs text-muted-foreground">/{cat.slug} — ordem {cat.display_order}</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setEditing(cat)} aria-label="Editar">
+              <Pencil />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => handleDelete(cat.id, cat.name)} aria-label="Excluir">
+              <Trash2 />
+            </Button>
+          </div>
+        ))}
+        {categories.length === 0 && (
+          <div className="border-y border-border py-16 text-center text-muted-foreground">
+            Nenhuma categoria cadastrada.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function CategoryEditor({
+  category,
+  isNew,
+  onSave,
+  onCancel,
+  busy,
+}: {
+  category: Category;
+  isNew: boolean;
+  onSave: (cat: Category) => void;
+  onCancel: () => void;
+  busy: boolean;
+}) {
+  const [form, setForm] = useState(category);
+  function set<K extends keyof Category>(key: K, value: Category[K]) {
+    setForm((c) => ({ ...c, [key]: value }));
+  }
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); onSave(form); }}
+      className="grid gap-4 rounded-lg border border-border bg-card p-4 sm:p-6"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          <ArrowLeft /> Categorias
+        </Button>
+        <Button type="submit" disabled={busy}>
+          {busy ? <Loader2 className="animate-spin" /> : <Save />} Salvar
+        </Button>
+      </div>
+      <h2 className="font-display text-3xl font-semibold">
+        {isNew ? "Nova categoria" : form.name}
+      </h2>
+      <Field label="Nome">
+        <Input
+          required
+          maxLength={60}
+          value={form.name}
+          onChange={(e) => {
+            set("name", e.target.value);
+            if (isNew) set("slug", slugify(e.target.value));
+          }}
+        />
+      </Field>
+      <Field label="Slug">
+        <Input
+          required
+          pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+          value={form.slug}
+          onChange={(e) => set("slug", slugify(e.target.value))}
+        />
+      </Field>
+      <Field label="Ícone (nome lucide)">
+        <Input
+          value={form.icon ?? ""}
+          onChange={(e) => set("icon", e.target.value || null)}
+          placeholder="ex: CakeSlice, Gift, Heart"
+        />
+      </Field>
+      <Field label="Ordem de exibição">
+        <Input
+          type="number"
+          min="0"
+          max="999"
+          value={form.display_order}
+          onChange={(e) => set("display_order", Number(e.target.value))}
+        />
+      </Field>
+    </form>
+  );
 }

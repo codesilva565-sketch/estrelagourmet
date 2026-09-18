@@ -8,7 +8,7 @@ export const Route = createFileRoute("/interesse")({
   loader: () => getCatalog(),
   head: () => ({
     meta: [
-      { title: "Lista de interesse — Estrela Gourmet" },
+      { title: "Lista de interesse — Estela Gourmet" },
       { name: "description", content: "Organize seus doces e envie uma consulta de encomenda." },
     ],
   }),
@@ -38,7 +38,7 @@ function InterestPage() {
           `${index + 1}. ${item.productName} — ${item.quantity} unidade(s)${item.variationName ? ` — ${item.variationName}` : ""}${item.desiredDate ? ` — data: ${item.desiredDate}` : ""}${item.notes ? ` — obs: ${item.notes}` : ""}`,
       )
       .join("\n");
-    const message = `Olá! Tudo bem? 💗\n\nVi o catálogo da Estrela Gourmet e gostaria de consultar uma encomenda.\n\nNome: ${name.trim()}\n\nProdutos:\n${products}\n\nData desejada: ${date || "A combinar"}\n\nObservações: ${notes.trim() || "Nenhuma"}\n\nVocês conseguem preparar para essa data? Poderiam confirmar a disponibilidade e o valor?`;
+    const message = `Olá! Tudo bem? 💗\n\nVi o catálogo da Estela Gourmet e gostaria de consultar uma encomenda.\n\nNome: ${name.trim()}\n\nProdutos:\n${products}\n\nData desejada: ${date || "A combinar"}\n\nObservações: ${notes.trim() || "Nenhuma"}\n\nVocês conseguem preparar para essa data? Poderiam confirmar a disponibilidade e o valor?`;
     window.open(
       `https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(message)}`,
       "_blank",
@@ -51,7 +51,7 @@ function InterestPage() {
       <div className="eg-page">
         <header className="eg-header eg-header-detail">
           <div className="eg-brand">
-            <span className="eg-brand-name">Estrela Gourmet</span>
+            <span className="eg-brand-name">Estela Gourmet</span>
           </div>
           <div className="eg-header-actions">
             <Link to="/" className="eg-icon-button" aria-label="Voltar ao catálogo">

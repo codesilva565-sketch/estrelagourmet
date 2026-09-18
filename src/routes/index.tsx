@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
   CakeSlice,
-  ChevronRight,
   Gift,
   Heart,
   MessageCircle,
@@ -15,34 +14,37 @@ import { ProductCard } from "@/components/catalog/product-card";
 import { SiteHeader } from "@/components/catalog/site-header";
 import { getCatalog } from "@/lib/catalog.functions";
 
-const HERO = "/assets/01-home/hero-principal-brigadeiros-caramelo-florais.jpg";
+const CAROUSEL_SLIDES = [
+  "/assets/02-brigadeiros/brigadeiro-chocolate-close.jpg",
+  "/assets/03-personalizados/alice-personagem-close.jpg",
+  "/assets/03-personalizados/angel-close-rosa.jpg",
+  "/assets/03-personalizados/alice-chave-dourada-close.jpg",
+  "/assets/04-caixas/caixa-brigadeiros-sortidos.jpg",
+];
 
-const fallbackIcons = [CakeSlice, Sparkles, Gift, Heart, CakeSlice];
+const CATEGORY_PHOTOS: Record<string, string> = {};
 
-const categoryNames = [
-  "Brigadeiros",
-  "Personalizados",
-  "Caixas",
-  "Presentes",
-  "Ocasiões",
-] as const;
-
-function CategoryIcon({ index }: { index: number }) {
-  const Icon = fallbackIcons[index] ?? CakeSlice;
-  return <Icon size={27} strokeWidth={1.4} />;
+function resolveCategoryPhoto(name: string): string | null {
+  const lower = name.toLowerCase();
+  if (lower.includes("brigadeiro")) return "/assets/02-brigadeiros/brigadeiro-chocolate-close.jpg";
+  if (lower.includes("personalizado")) return "/assets/03-personalizados/alice-personagem-close.jpg";
+  if (lower.includes("caixa")) return "/assets/04-caixas/caixa-brigadeiros-sortidos.jpg";
+  if (lower.includes("presente")) return "/assets/03-personalizados/estrela-dourada-close.jpg";
+  if (lower.includes("ocasi")) return "/assets/03-personalizados/angel-close-rosa.jpg";
+  return null;
 }
 
 export const Route = createFileRoute("/")({
   loader: () => getCatalog(),
   head: () => ({
     meta: [
-      { title: "Estrela Gourmet — Brigadeiros em Vicentina" },
+      { title: "Estela Gourmet — Brigadeiros em Vicentina" },
       {
         name: "description",
         content:
           "Conheça o catálogo de brigadeiros gourmet e envie sua consulta de encomenda pelo WhatsApp.",
       },
-      { property: "og:title", content: "Estrela Gourmet — Brigadeiros em Vicentina" },
+      { property: "og:title", content: "Estela Gourmet — Brigadeiros em Vicentina" },
       {
         property: "og:description",
         content: "Doces artesanais para tornar seus momentos ainda mais especiais.",
@@ -53,6 +55,45 @@ export const Route = createFileRoute("/")({
   }),
   component: HomePage,
 });
+
+function HeroCarousel() {
+  const [current, setCurrent] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(null);
+
+  const advance = useCallback(() => {
+    setCurrent((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
+  }, []);
+
+  useEffect(() => {
+    timerRef.current = setInterval(advance, 3500);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [advance]);
+
+  return (
+    <div className="eg-hero-image" aria-hidden="true">
+      <div
+        className="eg-hero-carousel"
+        style={{ transform: `translateX(-${current * 100}%)` }}
+      >
+        {CAROUSEL_SLIDES.map((src, i) => (
+          <div className="eg-hero-slide" key={i}>
+            <img src={src} alt="" loading={i === 0 ? "eager" : "lazy"} />
+          </div>
+        ))}
+      </div>
+      <div className="eg-hero-dots">
+        {CAROUSEL_SLIDES.map((_, i) => (
+          <button
+            key={i}
+            className={`eg-hero-dot ${i === current ? "eg-active" : ""}`}
+            onClick={() => setCurrent(i)}
+            aria-label={`Imagem ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function HomePage() {
   const data = Route.useLoaderData();
@@ -75,7 +116,7 @@ function HomePage() {
   }, [categoryFilter, data, query]);
 
   const featured = useMemo(
-    () => data.products.filter((p) => p.is_featured && p.is_available).slice(0, 3),
+    () => data.products.filter((p) => p.is_featured && p.is_available).slice(0, 6),
     [data],
   );
   const list =
@@ -83,7 +124,7 @@ function HomePage() {
       ? visible
       : featured.length
         ? featured
-        : visible.slice(0, 3);
+        : visible.slice(0, 6);
 
   const settings = data.settings;
 
@@ -93,20 +134,16 @@ function HomePage() {
         <SiteHeader logoUrl={settings.logo_url} variant="home" />
 
         <main>
-          {/* Hero — Grid 42% texto | 58% foto */}
-          <section className="eg-hero" aria-label="Apresentação Estrela Gourmet">
+          {/* Hero */}
+          <section className="eg-hero" aria-label="Apresentação Estela Gourmet">
             <div className="eg-hero-copy">
               <h1>
-                Pequenos<br />
-                detalhes,<br />
-                <em>grandes</em><br />
-                <em>momentos</em>
-                <span className="eg-hand-heart">♡</span>
+                Pequenos detalhes,
+                <br />
+                <em>grandes</em> <em>momentos</em>
               </h1>
               <p>
-                BRIGADEIROS QUE<br />
-                TORNAM A VIDA<br />
-                MAIS DOCE!
+                BRIGADEIROS QUE TORNAM A VIDA MAIS DOCE!
               </p>
               <button
                 className="eg-hero-cta"
@@ -114,45 +151,47 @@ function HomePage() {
                   document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" })
                 }
               >
-                <MessageCircle size={20} strokeWidth={1.8} /> FAÇA SUA ENCOMENDA <ArrowRight size={18} />
+                FAÇA SUA ENCOMENDA <ArrowRight size={16} />
               </button>
             </div>
-            <div className="eg-hero-image" aria-hidden="true">
-              <img src={HERO} alt="" className="h-full w-full object-cover" />
-              <p className="eg-hero-handwritten">
-                Sabor<br />que cria<br />boas<br />histórias ♡
-              </p>
-            </div>
+            <HeroCarousel />
           </section>
 
           {/* Categories */}
           <section className="eg-categories" aria-label="Categorias">
-            {data.categories.map((cat, index) => (
-              <button
-                className={`eg-category ${categoryFilter === cat.id ? "eg-active" : ""}`}
-                key={cat.id}
-                onClick={() => {
-                  setCategoryFilter(categoryFilter === cat.id ? null : cat.id);
-                  setShowAll(true);
-                  setQuery("");
-                  requestAnimationFrame(() =>
-                    document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }),
-                  );
-                }}
-                aria-pressed={categoryFilter === cat.id}
-              >
-                <span className="eg-category-circle">
-                  <CategoryIcon index={index} />
-                </span>
-                <span>{cat.name}</span>
-              </button>
-            ))}
+            {data.categories.map((cat) => {
+              const photo = CATEGORY_PHOTOS[cat.id] ?? resolveCategoryPhoto(cat.name);
+              return (
+                <button
+                  className={`eg-category ${categoryFilter === cat.id ? "eg-active" : ""}`}
+                  key={cat.id}
+                  onClick={() => {
+                    setCategoryFilter(categoryFilter === cat.id ? null : cat.id);
+                    setShowAll(true);
+                    setQuery("");
+                    requestAnimationFrame(() =>
+                      document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }),
+                    );
+                  }}
+                  aria-pressed={categoryFilter === cat.id}
+                >
+                  {photo ? (
+                    <img className="eg-category-img" src={photo} alt={cat.name} />
+                  ) : (
+                    <span className="eg-category-img" style={{ display: "grid", placeItems: "center", background: "#FBE8E7" }}>
+                      <CakeSlice size={20} strokeWidth={1.4} />
+                    </span>
+                  )}
+                  <span>{cat.name}</span>
+                </button>
+              );
+            })}
           </section>
 
           {/* Search */}
-          <section className="eg-search-area" aria-label="Pesquisar e filtrar produtos">
+          <section className="eg-search-area" aria-label="Pesquisar e filtrar produtos" style={{ position: "relative" }}>
             <label className="eg-search">
-              <Search size={20} strokeWidth={1.6} />
+              <Search size={18} strokeWidth={1.6} />
               <input
                 aria-label="Pesquisar produtos"
                 value={query}
@@ -169,7 +208,7 @@ function HomePage() {
               aria-expanded={filtersOpen}
               onClick={() => setFiltersOpen(!filtersOpen)}
             >
-              <SlidersHorizontal size={22} strokeWidth={1.6} />
+              <SlidersHorizontal size={20} strokeWidth={1.6} />
             </button>
             {filtersOpen && (
               <div className="eg-filter-drawer">
@@ -219,7 +258,7 @@ function HomePage() {
                   setShowAll(!showAll);
                 }}
               >
-                {showAll ? "Ver destaques" : "Ver todos"} <ArrowRight size={15} />
+                {showAll ? "Ver destaques" : "Ver todos"} <ArrowRight size={14} />
               </button>
             </div>
             <div className="eg-product-grid">
@@ -238,36 +277,20 @@ function HomePage() {
           {/* Benefits */}
           <section id="sobre" className="eg-benefits" aria-label="Nossa proposta">
             <div>
-              <CakeSlice size={22} />
-              <span>
-                Qualidade
-                <br />
-                artesanal
-              </span>
+              <CakeSlice size={20} />
+              <span>Qualidade<br />artesanal</span>
             </div>
             <div>
-              <Sparkles size={22} />
-              <span>
-                Feito com
-                <br />
-                carinho
-              </span>
+              <Sparkles size={20} />
+              <span>Feito com<br />carinho</span>
             </div>
             <div>
-              <MessageCircle size={22} />
-              <span>
-                Atendimento
-                <br />
-                pelo WhatsApp
-              </span>
+              <MessageCircle size={20} />
+              <span>Atendimento<br />pelo WhatsApp</span>
             </div>
             <div>
-              <Heart size={22} />
-              <span>
-                Doces que
-                <br />
-                conectam
-              </span>
+              <Heart size={20} />
+              <span>Doces que<br />conectam</span>
             </div>
           </section>
           <p className="eg-signoff">
