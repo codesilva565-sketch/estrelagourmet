@@ -16,9 +16,7 @@ services:
       NODE_ENV: production
       PORT: "3000"
       HOST: 0.0.0.0
-    # TEMPORARIO (sem dominio): acessa por http://IP_DA_VPS:3001
-    # Quando tiver o dominio, REMOVA este bloco "ports" e use o comentario "networks" abaixo.
+    # Acesso SOMENTE local: o Nginx (host) faz o proxy do dominio para 127.0.0.1:3001.
+    # Nao expor para fora: a porta 3001 nao fica acessivel publicamente.
     ports:
-      - "3001:3000"
-    # networks:
-    #   - SUA_REDE_DO_NGINX
+      - "127.0.0.1:3001:3000"
