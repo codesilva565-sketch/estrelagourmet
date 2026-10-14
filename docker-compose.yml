@@ -1,0 +1,25 @@
+services:
+  estrela-gourmet:
+    build:
+      context: .
+      args:
+        # VITE_* sao embutidas no bundle do cliente em tempo de build
+        VITE_DEMO_MODE: "false"
+        VITE_ADMIN_PASSWORD: "${ADMIN_PASSWORD:-estrela123}"
+        VITE_SUPABASE_URL: "${SUPABASE_URL}"
+        VITE_SUPABASE_PUBLISHABLE_KEY: "${SUPABASE_PUBLISHABLE_KEY}"
+    image: estrela-gourmet:latest
+    container_name: estrela-gourmet
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: 0.0.0.0
+    # TEMPORARIO (sem dominio): acessa por http://IP_DA_VPS:3001
+    # Quando tiver o dominio, REMOVA este bloco "ports" e use o comentario "networks" abaixo.
+    ports:
+      - "3001:3000"
+    # networks:
+    #   - SUA_REDE_DO_NGINX
