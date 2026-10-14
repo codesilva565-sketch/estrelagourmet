@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
@@ -45,6 +45,9 @@ import {
   deleteCategory,
 } from "@/lib/admin.functions";
 import type { Category, Product, ProductVariation, SiteSettings } from "@/lib/catalog.types";
+import { MOCK_CATALOG } from "@/lib/mock-catalog";
+import { isAdminAuthed, loginAdmin, logoutAdmin } from "@/lib/admin-auth";
+import { fileToDataUrl, readDemoOverrides, writeDemoOverrides } from "@/lib/demo-store";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -83,11 +86,48 @@ type AdminData = {
   settings: SiteSettings | null;
 };
 
+const DEMO_MODE = import.meta.env["VITE_DEMO_MODE"] === "true";
+
+function demoAdminData(): AdminData {
+  const now = new Date().toISOString();
+  return {
+    categories: MOCK_CATALOG.categories,
+    settings: MOCK_CATALOG.settings,
+    products: MOCK_CATALOG.products.map((product) => ({
+      ...product,
+      is_archived: false,
+      created_at: now,
+      updated_at: now,
+      product_images: product.product_images.map((image) => ({
+        ...image,
+        signed_url: image.image_url,
+      })),
+      product_variations: product.product_variations.map((variation) => ({
+        ...variation,
+        product_id: product.id,
+        created_at: now,
+        updated_at: now,
+      })),
+    })),
+  };
+}
+
 function AdminPage() {
-  const navigate = useNavigate();
+  const [authed, setAuthed] = useState(() => isAdminAuthed());
+  if (!authed) return <LoginForm onSuccess={() => setAuthed(true)} />;
+  return (
+    <AuthenticatedAdmin
+      onSignOut={async () => {
+        logoutAdmin();
+        setAuthed(false);
+      }}
+    />
+  );
+}
+
+function AuthenticatedAdmin({ onSignOut }: { onSignOut: () => Promise<void> }) {
   const loadAdmin = useServerFn(getAdminCatalog);
   const [checking, setChecking] = useState(true);
-  const [session, setSession] = useState(false);
   const [data, setData] = useState<AdminData | null>(null);
   const [accessError, setAccessError] = useState("");
 
@@ -95,79 +135,42 @@ function AdminPage() {
     setChecking(true);
     setAccessError("");
     try {
-      const result = await loadAdmin();
-      setData(result as AdminData);
+      if (DEMO_MODE) {
+        setData(demoAdminData());
+      } else {
+        const result = await loadAdmin();
+        setData(result as AdminData);
+      }
     } catch {
-      setAccessError("Este acesso ainda não tem permissão de proprietária.");
+      setAccessError("Não foi possível carregar o catálogo agora.");
     } finally {
       setChecking(false);
     }
   }, [loadAdmin]);
 
   useEffect(() => {
-    let active = true;
-    void supabase.auth.getUser().then(({ data: authData }) => {
-      if (!active) return;
-      const signedIn = Boolean(authData.user);
-      setSession(signedIn);
-      if (signedIn) void refresh();
-      else setChecking(false);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((event, authSession) => {
-      if (!active || (event !== "SIGNED_IN" && event !== "SIGNED_OUT")) return;
-      setSession(Boolean(authSession));
-      if (authSession) void refresh();
-      else {
-        setData(null);
-        setChecking(false);
-      }
-    });
-    return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
+    void refresh();
   }, [refresh]);
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    await navigate({ to: "/", replace: true });
-  }
-
   if (checking) return <CenteredStatus />;
-  if (!session) return <LoginForm />;
-  if (!data || accessError) return <AccessDenied message={accessError} onSignOut={signOut} />;
-  return <Dashboard data={data} refresh={refresh} onSignOut={signOut} />;
+  if (!data || accessError) return <AccessDenied message={accessError} onSignOut={onSignOut} />;
+  return <Dashboard data={data} refresh={refresh} onSignOut={onSignOut} />;
 }
 
-function LoginForm() {
-  const [email, setEmail] = useState("");
+function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  async function submit(event: React.FormEvent) {
+  function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError("");
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    if (authError) setError("E-mail ou senha inválidos.");
-    setBusy(false);
-  }
-  async function resetPassword() {
-    if (!email.trim()) {
-      setError("Informe seu e-mail para recuperar a senha.");
+    if (loginAdmin(password)) {
+      onSuccess();
       return;
     }
-    setBusy(true);
-    setError("");
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (resetError) setError("Não foi possível enviar a recuperação agora.");
-    else toast.success("Confira seu e-mail para criar uma nova senha.");
+    setError("Senha incorreta. Tente novamente.");
     setBusy(false);
   }
   return (
@@ -181,22 +184,9 @@ function LoginForm() {
         <p className="mt-5 font-script text-4xl text-primary">Estrela Gourmet</p>
         <h1 className="font-display text-4xl font-semibold">Área da proprietária</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Entre para editar produtos, fotos e informações do catálogo.
+          Digite a senha para editar produtos, fotos e informações do catálogo.
         </p>
         <form onSubmit={submit} className="mt-7 grid gap-4">
-          <div>
-            <Label htmlFor="email">E-mail</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              maxLength={255}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-2 h-11"
-            />
-          </div>
           <div>
             <Label htmlFor="password">Senha</Label>
             <div className="relative mt-2">
@@ -205,7 +195,6 @@ function LoginForm() {
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
                 required
-                minLength={6}
                 maxLength={128}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -231,10 +220,10 @@ function LoginForm() {
           <Button type="submit" variant="elegant" size="lg" disabled={busy}>
             {busy && <Loader2 className="animate-spin" />} Entrar
           </Button>
-          <Button type="button" variant="link" disabled={busy} onClick={resetPassword}>
-            Esqueci minha senha
-          </Button>
         </form>
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Acesso restrito à proprietária.
+        </p>
       </section>
     </main>
   );
@@ -302,6 +291,12 @@ function Dashboard({
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {DEMO_MODE && (
+          <div className="mb-5 rounded-md border border-primary/30 bg-secondary px-4 py-3 text-sm text-secondary-foreground">
+            Você está no <strong>modo demonstração</strong>. O painel mostra dados de exemplo e as
+            alterações não são salvas.
+          </div>
+        )}
         <Tabs defaultValue="products">
           <TabsList className="grid h-11 w-full grid-cols-3 sm:w-auto">
             <TabsTrigger value="products">
@@ -941,12 +936,19 @@ function SettingsForm({
 }) {
   const save = useServerFn(saveSiteSettings);
   const [busy, setBusy] = useState(false);
+  const overrides = DEMO_MODE ? readDemoOverrides() : {};
   const [form, setForm] = useState({
-    business_name: settings?.business_name ?? "Estrela Gourmet",
-    whatsapp_number: settings?.whatsapp_number ?? "",
-    instagram_url: settings?.instagram_url ?? "",
-    contact_info: settings?.contact_info ?? "",
-    order_info: settings?.order_info ?? "",
+    business_name: overrides.business_name ?? settings?.business_name ?? "Estrela Gourmet",
+    whatsapp_number: overrides.whatsapp_number ?? settings?.whatsapp_number ?? "",
+    instagram_url: overrides.instagram_url ?? settings?.instagram_url ?? "",
+    contact_info: overrides.contact_info ?? settings?.contact_info ?? "",
+    order_info: overrides.order_info ?? settings?.order_info ?? "",
+    hero_title:
+      overrides.hero_title ?? settings?.hero_title ?? "Pequenos detalhes, grandes momentos",
+    hero_subtitle:
+      overrides.hero_subtitle ??
+      settings?.hero_subtitle ??
+      "Brigadeiros que tornam a vida mais doce.",
   });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoPending, setLogoPending] = useState<File | null>(null);
@@ -956,6 +958,13 @@ function SettingsForm({
   const [heroPreviews, setHeroPreviews] = useState<string[]>([]);
 
   useEffect(() => {
+    if (DEMO_MODE) {
+      const o = readDemoOverrides();
+      setLogoPreview(o.logo_url ?? null);
+      setHeroPaths(o.hero_images ?? []);
+      setHeroDisplay(o.hero_images ?? []);
+      return;
+    }
     let active = true;
     void (async () => {
       const [logo, heroes] = await Promise.all([
@@ -1018,6 +1027,15 @@ function SettingsForm({
     if (!logoPending) return;
     setBusy(true);
     try {
+      if (DEMO_MODE) {
+        const dataUrl = await fileToDataUrl(logoPending);
+        writeDemoOverrides({ logo_url: dataUrl });
+        setLogoPreview(dataUrl);
+        setLogoPending(null);
+        await onSaved();
+        toast.success("Logo atualizado (modo demonstração).");
+        return;
+      }
       const extension = logoPending.name.split(".").pop()?.toLowerCase() ?? "jpg";
       const path = `site/logo/${crypto.randomUUID()}.${extension}`;
       const { error } = await supabase.storage
@@ -1042,6 +1060,19 @@ function SettingsForm({
     if (heroPending.length === 0) return;
     setBusy(true);
     try {
+      if (DEMO_MODE) {
+        const dataUrls = await Promise.all(heroPending.map((file) => fileToDataUrl(file)));
+        const updated = [...heroPaths, ...dataUrls];
+        writeDemoOverrides({ hero_images: updated });
+        setHeroPaths(updated);
+        setHeroDisplay(updated);
+        heroPreviews.forEach((p) => URL.revokeObjectURL(p));
+        setHeroPending([]);
+        setHeroPreviews([]);
+        await onSaved();
+        toast.success("Fotos de capa atualizadas (modo demonstração).");
+        return;
+      }
       const newPaths: string[] = [];
       for (const file of heroPending) {
         const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -1083,6 +1114,13 @@ function SettingsForm({
     setBusy(true);
     void (async () => {
       try {
+        if (DEMO_MODE) {
+          writeDemoOverrides({ logo_url: null });
+          setLogoPreview(null);
+          await onSaved();
+          toast.success("Logo removido.");
+          return;
+        }
         await save({
           data: {
             ...form,
@@ -1104,6 +1142,15 @@ function SettingsForm({
   async function handleRemoveHero(index: number) {
     setBusy(true);
     try {
+      if (DEMO_MODE) {
+        const newPaths = heroPaths.filter((_, i) => i !== index);
+        writeDemoOverrides({ hero_images: newPaths });
+        setHeroPaths(newPaths);
+        setHeroDisplay((prev) => prev.filter((_, i) => i !== index));
+        await onSaved();
+        toast.success("Foto de capa removida.");
+        return;
+      }
       const newPaths = heroPaths.filter((_, i) => i !== index);
       await save({
         data: {
@@ -1134,6 +1181,15 @@ function SettingsForm({
     event.preventDefault();
     setBusy(true);
     try {
+      if (DEMO_MODE) {
+        writeDemoOverrides({
+          ...form,
+          whatsapp_number: form.whatsapp_number.replace(/\D/g, ""),
+        });
+        toast.success("Configurações salvas (modo demonstração).");
+        await onSaved();
+        return;
+      }
       await save({ data: { ...form, whatsapp_number: form.whatsapp_number.replace(/\D/g, "") } });
       toast.success("Configurações salvas.");
       await onSaved();
@@ -1156,6 +1212,22 @@ function SettingsForm({
           maxLength={120}
           value={form.business_name}
           onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+        />
+      </Field>
+      <Field label="Título da página inicial (o texto após a vírgula fica em rosa)">
+        <Input
+          maxLength={120}
+          placeholder="Pequenos detalhes, grandes momentos"
+          value={form.hero_title}
+          onChange={(e) => setForm({ ...form, hero_title: e.target.value })}
+        />
+      </Field>
+      <Field label="Frase abaixo do título">
+        <Input
+          maxLength={240}
+          placeholder="Brigadeiros que tornam a vida mais doce."
+          value={form.hero_subtitle}
+          onChange={(e) => setForm({ ...form, hero_subtitle: e.target.value })}
         />
       </Field>
       <Field label="WhatsApp com DDD">

@@ -45,6 +45,8 @@ const settingsSchema = z.object({
   order_info: z.string().trim().max(1000),
   logo_url: z.string().nullable().optional(),
   hero_images: z.array(z.string().trim()).max(10).optional(),
+  hero_title: z.string().trim().max(160).optional(),
+  hero_subtitle: z.string().trim().max(240).optional(),
 });
 
 async function assertAdmin(supabase: SupabaseClient<Database>, userId: string) {
@@ -194,10 +196,12 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
   .inputValidator((input) => settingsSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { hero_images, logo_url, ...rest } = data;
+    const { hero_images, logo_url, hero_title, hero_subtitle, ...rest } = data;
     const updateData: Database["public"]["Tables"]["site_settings"]["Update"] = { ...rest };
     if (logo_url !== undefined) updateData.logo_url = logo_url;
     if (hero_images) updateData.hero_images = hero_images;
+    if (hero_title !== undefined) updateData.hero_title = hero_title;
+    if (hero_subtitle !== undefined) updateData.hero_subtitle = hero_subtitle;
     const { error } = await context.supabase.from("site_settings").update(updateData).eq("id", 1);
     if (error) throw new Error(error.message);
     return { ok: true };

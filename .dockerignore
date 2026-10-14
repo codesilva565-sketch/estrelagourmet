@@ -1,0 +1,12 @@
+node_modules
+.output
+.git
+.gitignore
+.env
+.env.*
+*.log
+supabase/.temp
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md

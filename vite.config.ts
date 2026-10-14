@@ -12,4 +12,13 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Na VPS usamos o preset Node (rode o build com DEPLOY_TARGET=vps).
+  // Sem essa variavel o Lovable continua usando o preset padrao dele.
+  nitro: process.env["DEPLOY_TARGET"] === "vps" ? { preset: "node-server" } : undefined,
+  // Dev-only: permite acessar o servidor por tunel (teste no celular).
+  vite: {
+    server: {
+      allowedHosts: [".trycloudflare.com", ".loca.lt"],
+    },
+  },
 });

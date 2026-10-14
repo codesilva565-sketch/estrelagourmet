@@ -205,6 +205,8 @@ export type Database = {
           business_name: string;
           contact_info: string;
           hero_images: string[];
+          hero_subtitle: string;
+          hero_title: string;
           id: number;
           instagram_url: string;
           logo_url: string | null;
@@ -216,6 +218,8 @@ export type Database = {
           business_name?: string;
           contact_info?: string;
           hero_images?: string[];
+          hero_subtitle?: string;
+          hero_title?: string;
           id?: number;
           instagram_url?: string;
           logo_url?: string | null;
@@ -227,6 +231,8 @@ export type Database = {
           business_name?: string;
           contact_info?: string;
           hero_images?: string[];
+          hero_subtitle?: string;
+          hero_title?: string;
           id?: number;
           instagram_url?: string;
           logo_url?: string | null;

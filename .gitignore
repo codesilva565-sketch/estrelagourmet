@@ -32,3 +32,12 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Segredos / ambiente
+.env
+.env.*
+!.env.example
+
+# Scripts locais com credenciais
+run-sql.mjs
+supabase/.temp/

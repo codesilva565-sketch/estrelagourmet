@@ -1,9 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Home, MessageCircle, Search, Heart } from "lucide-react";
 import { getCatalog } from "@/lib/catalog.functions";
+import { readDemoOverrides, type DemoOverrides } from "@/lib/demo-store";
 import { useInterest } from "@/lib/interest-context";
-import { toast } from "sonner";
 import "@/styles/estrela-home.css";
 
 export const Route = createFileRoute("/")({
@@ -33,18 +33,34 @@ const MENSAGEM_GERAL =
 
 function HomePage() {
   const data = Route.useLoaderData();
-  const { addItem, items } = useInterest();
+  const { items } = useInterest();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<string | null>(null);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [demo, setDemo] = useState<DemoOverrides>({});
   const buscaRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setDemo(readDemoOverrides());
+  }, []);
+
   const settings = data.settings;
-  const digits = (settings?.whatsapp_number ?? "").replace(/\D/g, "");
+  const digits = (demo.whatsapp_number ?? settings?.whatsapp_number ?? "").replace(/\D/g, "");
   const whatsapp = `https://wa.me/${digits}`;
   const whatsappGeral = `${whatsapp}?text=${encodeURIComponent(MENSAGEM_GERAL)}`;
   const bannerImage =
-    settings?.hero_images?.[0] ?? "/assets/01-home/hero-principal-brigadeiros-caramelo-florais.jpg";
+    demo.hero_images?.[0] ??
+    settings?.hero_images?.[0] ??
+    "/assets/01-home/hero-principal-brigadeiros-caramelo-florais.jpg";
+
+  const heroTitle =
+    (demo.hero_title ?? settings?.hero_title ?? "").trim() || "Pequenos detalhes, grandes momentos";
+  const heroSubtitle =
+    (demo.hero_subtitle ?? settings?.hero_subtitle ?? "").trim() ||
+    "Brigadeiros que tornam a vida mais doce.";
+  const heroSeparador = heroTitle.indexOf(",");
+  const heroTituloInicio = heroSeparador >= 0 ? heroTitle.slice(0, heroSeparador + 1) : heroTitle;
+  const heroTituloDestaque = heroSeparador >= 0 ? heroTitle.slice(heroSeparador + 1).trim() : "";
 
   const nomeCategoria = (categoriaId: string | null) =>
     data.categories.find((c) => c.id === categoriaId)?.name ?? "";
@@ -66,27 +82,20 @@ function HomePage() {
       .sort((a, b) => Number(b.is_featured) - Number(a.is_featured));
   }, [busca, categoria, data]);
 
-  function adicionarAosInteresses(produto: (typeof data.products)[number]) {
-    addItem({
-      productId: produto.id,
-      productName: produto.name,
-      quantity: 1,
-      variationId: null,
-      variationName: null,
-      desiredDate: "",
-      notes: "",
-      imageUrl: produto.product_images[0]?.image_url ?? null,
-    });
-    toast.success(`${produto.name} foi adicionado à sua lista ♡`);
-  }
-
   return (
     <div className="estrela-home">
+      <div className="faixa-topo">
+        <span>✨ Brigadeiros artesanais · encomendas para festas e presentes ✨</span>
+      </div>
       <div className="loja">
         <header className="topo">
-          <Link className="logo-eg" to="/" aria-label="Estrela Gourmet">
-            EG
-          </Link>
+          {demo.logo_url ? (
+            <img className="logo-eg-img" src={demo.logo_url} alt="Estrela Gourmet" />
+          ) : (
+            <Link className="logo-eg" to="/" aria-label="Estrela Gourmet">
+              EG
+            </Link>
+          )}
           <div className="topo-marca">
             <strong>Estrela Gourmet</strong>
             <span>BRIGADEIROS GOURMET</span>
@@ -128,10 +137,10 @@ function HomePage() {
           <div className="hero-texto">
             <span className="sobretitulo">FEITOS COM AMOR EM VICENTINA/MS</span>
             <h1>
-              Pequenos detalhes,
-              <em>grandes momentos</em>
+              {heroTituloInicio}
+              {heroTituloDestaque && <em>{heroTituloDestaque}</em>}
             </h1>
-            <p>Brigadeiros que tornam a vida mais doce.</p>
+            <p>{heroSubtitle}</p>
             <a className="btn-encomenda" href={whatsappGeral} target="_blank" rel="noreferrer">
               <Heart size={18} /> FAÇA SUA ENCOMENDA
             </a>
@@ -189,6 +198,7 @@ function HomePage() {
                     alt={produto.name}
                     loading="lazy"
                   />
+                  {produto.is_featured && <span className="produto-selo">Mais pedido</span>}
                   <span className="produto-coracao">♡</span>
                 </Link>
                 <div className="produto-info">
@@ -206,13 +216,13 @@ function HomePage() {
                         })
                       : "Sob consulta"}
                   </span>
-                  <button
+                  <Link
                     className="btn-interesse"
-                    type="button"
-                    onClick={() => adicionarAosInteresses(produto)}
+                    to="/produto/$slug"
+                    params={{ slug: produto.slug }}
                   >
                     Tenho interesse
-                  </button>
+                  </Link>
                 </div>
               </article>
             ))}
@@ -251,6 +261,16 @@ function HomePage() {
           </span>
         </footer>
       </div>
+
+      <a
+        className="zap-flutuante"
+        href={whatsappGeral}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Falar no WhatsApp"
+      >
+        <MessageCircle size={26} />
+      </a>
 
       <nav className="rodape-fixo" aria-label="Navegação rápida">
         <a href="#inicio" className="ativo">

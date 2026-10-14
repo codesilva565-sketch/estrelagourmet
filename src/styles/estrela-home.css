@@ -6,8 +6,14 @@
   --rosa-forte: #d9a5a4;
   --rosa-escuro: #b87a79;
   --rosa-clara: #f4e0df;
+  --rosa-viva: #e07b86;
+  --rosa-700: #c25f6b;
+  --dourado: #c99a4b;
+  --dourado-claro: #e7c777;
+  --whats: #22c35e;
   --marrom: #5f3d33;
   --texto: #8a6f66;
+  --sombra-rosa: 0 16px 34px rgba(191, 109, 115, 0.2);
 }
 
 html {
@@ -16,7 +22,9 @@ html {
 
 .estrela-home {
   min-height: 100vh;
-  background: var(--bege);
+  background:
+    radial-gradient(120% 60% at 100% 0%, #fceeea 0%, transparent 55%),
+    radial-gradient(120% 50% at 0% 100%, #fdf1e9 0%, transparent 55%), var(--bege);
   color: var(--marrom);
   font-family: "DM Sans", sans-serif;
   padding-bottom: calc(74px + env(safe-area-inset-bottom));
@@ -43,6 +51,23 @@ html {
   padding: 0 16px;
 }
 
+/* ---------- Faixa de destaque ---------- */
+.estrela-home .faixa-topo {
+  padding: 9px 16px;
+  background: linear-gradient(90deg, #c25f6b, #d98a92 50%, #c25f6b);
+  color: #fff;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.estrela-home .faixa-topo span {
+  display: inline-block;
+  animation: pulsar-suave 3s ease-in-out infinite;
+}
+
 /* ---------- Header ---------- */
 .estrela-home .topo {
   position: relative;
@@ -67,10 +92,24 @@ html {
   font-weight: 600;
   font-size: 17px;
   letter-spacing: 0.5px;
+  box-shadow: 0 8px 18px rgba(191, 109, 115, 0.16);
+}
+
+.estrela-home .logo-eg-img {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  padding: 2px;
+  object-fit: contain;
+  border: 1.5px solid var(--rosa);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(191, 109, 115, 0.16);
 }
 
 .estrela-home .topo-marca {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   line-height: 1.05;
@@ -103,52 +142,45 @@ html {
   cursor: pointer;
 }
 
-.estrela-home .hamburguer span {
-  display: block;
-  width: 18px;
-  height: 1.8px;
-  border-radius: 2px;
-  background: var(--rosa-escuro);
-  transition: 0.2s;
+.estrela-home .hamburguer:hover {
+  background: var(--rosa-clara);
 }
 
 .estrela-home .menu-mobile {
   position: absolute;
-  top: calc(100% - 4px);
-  right: 0;
   z-index: 60;
-  min-width: 216px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  gap: 4px;
+  min-width: 224px;
+  padding: 10px;
   border: 1px solid var(--rosa-clara);
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 18px 40px #80564b1f;
+  box-shadow: 0 20px 30px rgba(122, 80, 60, 0.18);
 }
 
 .estrela-home .menu-mobile a {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 14px;
   color: var(--marrom);
+  transition: 0.15s;
 }
 
 .estrela-home .menu-mobile a:hover {
-  background: var(--bege);
-  color: var(--rosa-escuro);
+  background: var(--rosa-clara);
+  color: var(--rosa-700);
 }
 
 .estrela-home .menu-contador {
+  display: inline-block;
   min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 20px;
-  background: var(--rosa);
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, var(--rosa-viva), var(--rosa-700));
   color: #fff;
   font-size: 11px;
   text-align: center;
@@ -156,23 +188,31 @@ html {
 
 /* ---------- Hero ---------- */
 .estrela-home .hero {
+  position: relative;
   overflow: hidden;
   display: grid;
   gap: 0;
-  border-radius: 22px;
-  background: linear-gradient(160deg, #fff, #f7e5e2);
+  border-radius: 26px;
+  border: 1px solid #f0d9d6;
+  background: radial-gradient(140% 120% at 0% 0%, #fff7f2 0%, #fbeae6 45%, #f6dcd8 100%);
+  box-shadow: var(--sombra-rosa);
+  animation: subir 0.6s ease both;
 }
 
 .estrela-home .hero-texto {
-  padding: 30px 24px 32px;
+  padding: 30px 24px 34px;
 }
 
 .estrela-home .hero-texto .sobretitulo {
-  display: block;
-  margin-bottom: 14px;
+  display: inline-block;
+  margin-bottom: 16px;
+  padding: 5px 14px;
+  border-radius: 30px;
+  background: #fff;
   font-size: 10px;
-  letter-spacing: 2.5px;
-  color: var(--rosa-escuro);
+  letter-spacing: 2px;
+  color: var(--rosa-700);
+  box-shadow: 0 6px 16px rgba(191, 109, 115, 0.14);
 }
 
 .estrela-home .hero h1 {
@@ -180,7 +220,7 @@ html {
   font-family: "Playfair Display", serif;
   font-style: italic;
   font-weight: 500;
-  font-size: clamp(34px, 10vw, 56px);
+  font-size: clamp(36px, 10.5vw, 60px);
   line-height: 1.02;
   letter-spacing: -0.5px;
   color: var(--marrom);
@@ -188,7 +228,10 @@ html {
 
 .estrela-home .hero h1 em {
   display: block;
-  color: var(--rosa-escuro);
+  background: linear-gradient(100deg, var(--rosa-700), var(--rosa-viva) 70%, var(--dourado));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   font-style: italic;
 }
 
@@ -200,25 +243,34 @@ html {
   color: var(--texto);
 }
 
-.estrela-home .botao-encomenda {
+.estrela-home .btn-encomenda {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-top: 22px;
-  padding: 14px 26px;
+  margin-top: 24px;
+  padding: 15px 28px;
   border-radius: 40px;
-  background: var(--rosa);
+  background: linear-gradient(135deg, var(--rosa-viva), var(--rosa-700));
   color: #fff;
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  box-shadow: 0 10px 22px #d9a5a455;
-  transition: 0.2s;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  box-shadow: 0 14px 30px rgba(194, 95, 107, 0.38);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  animation: brilhar-botao 3s ease-in-out infinite;
+}
+
+.estrela-home .btn-encomenda:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(194, 95, 107, 0.48);
 }
 
 .estrela-home .hero-foto {
   position: relative;
-  min-height: 230px;
+  min-height: 240px;
 }
 
 .estrela-home .hero-foto img {
@@ -235,26 +287,30 @@ html {
   bottom: 18px;
   display: grid;
   place-content: center;
-  width: 88px;
-  height: 88px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
-  background: #fff9f0e8;
+  background: linear-gradient(140deg, #fff, #fdf1e6);
+  box-shadow:
+    0 12px 26px rgba(122, 80, 60, 0.26),
+    inset 0 0 0 2px var(--dourado-claro);
   text-align: center;
   font-family: "Playfair Display", serif;
   font-style: italic;
   font-size: 13px;
   line-height: 1.3;
-  color: var(--marrom);
+  color: #8a5a2b;
 }
 
 /* ---------- Categorias ---------- */
 .estrela-home .cats {
   display: flex;
   gap: 16px;
-  margin: 20px 0 4px;
+  margin: 22px 0 4px;
   padding-bottom: 6px;
   overflow-x: auto;
   scrollbar-width: none;
+  animation: subir 0.6s 0.05s ease both;
 }
 
 .estrela-home .cats::-webkit-scrollbar {
@@ -262,7 +318,7 @@ html {
 }
 
 .estrela-home .cat {
-  flex: 0 0 70px;
+  flex: 0 0 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -277,20 +333,22 @@ html {
 .estrela-home .cat-icone {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 60px;
+  height: 60px;
   border: 1.5px solid var(--rosa-clara);
   border-radius: 50%;
-  background: #fff;
-  font-size: 24px;
+  background: linear-gradient(140deg, #fff, #fdf0ec);
+  font-size: 25px;
+  box-shadow: 0 8px 18px rgba(191, 109, 115, 0.12);
   transition: 0.2s;
 }
 
 .estrela-home .cat:hover .cat-icone,
 .estrela-home .cat-ativa .cat-icone {
-  border-color: var(--rosa);
-  background: var(--rosa-clara);
-  transform: translateY(-3px);
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--rosa-viva), var(--rosa-700));
+  box-shadow: 0 14px 24px rgba(194, 95, 107, 0.38);
+  transform: translateY(-4px) scale(1.04);
 }
 
 /* ---------- Busca ---------- */
@@ -298,11 +356,21 @@ html {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 20px 0 4px;
+  margin: 22px 0 4px;
   padding: 14px 18px;
   border: 1px solid var(--rosa-clara);
   border-radius: 40px;
   background: #fff;
+  box-shadow: 0 10px 22px rgba(191, 109, 115, 0.1);
+  transition:
+    box-shadow 0.2s,
+    border-color 0.2s;
+  animation: subir 0.6s 0.1s ease both;
+}
+
+.estrela-home .busca:focus-within {
+  border-color: var(--rosa-viva);
+  box-shadow: 0 12px 26px rgba(194, 95, 107, 0.24);
 }
 
 .estrela-home .busca svg {
@@ -330,19 +398,32 @@ html {
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin: 26px 0 14px;
+  margin: 30px 0 16px;
 }
 
 .estrela-home .titulo-secao h2 {
+  position: relative;
   margin: 0;
+  padding-bottom: 10px;
   font-family: "Playfair Display", serif;
   font-style: italic;
   font-weight: 600;
-  font-size: 26px;
+  font-size: 28px;
+}
+
+.estrela-home .titulo-secao h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 64px;
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--rosa-viva), var(--dourado-claro));
 }
 
 .estrela-home .titulo-secao h2 span {
-  color: var(--rosa);
+  color: var(--rosa-viva);
 }
 
 .estrela-home .titulo-secao a {
@@ -351,47 +432,69 @@ html {
   color: var(--rosa-escuro);
 }
 
+.estrela-home .titulo-secao a:hover {
+  color: var(--rosa-700);
+}
+
 .estrela-home .produtos {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .estrela-home .produto {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #f1e2dc;
-  border-radius: 18px;
+  border: 1px solid #f1ddd9;
+  border-radius: 22px;
   background: #fff;
+  box-shadow: 0 8px 20px rgba(191, 109, 115, 0.09);
   transition:
     transform 0.25s,
-    box-shadow 0.25s;
+    box-shadow 0.25s,
+    border-color 0.25s;
+  animation: subir 0.5s ease both;
 }
 
 .estrela-home .produto:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 26px #80564b12;
+  transform: translateY(-6px);
+  border-color: #e9c2c0;
+  box-shadow: 0 22px 42px rgba(191, 109, 115, 0.24);
 }
 
 .estrela-home .produto-foto {
   position: relative;
   display: block;
-  aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: var(--rosa-clara);
+  border-radius: 21px 21px 0 0;
 }
 
 .estrela-home .produto-foto img {
   display: block;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1 / 1;
   object-fit: cover;
-  transition: transform 0.4s;
+  transition: transform 0.5s;
 }
 
 .estrela-home .produto:hover .produto-foto img {
-  transform: scale(1.04);
+  transform: scale(1.06);
+}
+
+.estrela-home .produto-selo {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 5px 12px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, var(--dourado-claro), var(--dourado));
+  color: #4a3418;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  box-shadow: 0 6px 14px rgba(201, 154, 75, 0.4);
 }
 
 .estrela-home .produto-coracao {
@@ -403,9 +506,10 @@ html {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #fffdfaee;
-  color: var(--rosa);
-  font-size: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--rosa-viva);
+  font-size: 16px;
+  box-shadow: 0 4px 10px rgba(122, 80, 60, 0.14);
 }
 
 .estrela-home .produto-info {
@@ -417,14 +521,19 @@ html {
 }
 
 .estrela-home .produto-categoria {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 30px;
+  background: var(--rosa-clara);
+  color: var(--rosa-700);
   font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
-  letter-spacing: 1.4px;
-  color: var(--rosa-escuro);
 }
 
 .estrela-home .produto h3 {
-  margin: 0;
+  margin: 2px 0 0;
   font-family: "Playfair Display", serif;
   font-weight: 600;
   font-size: 16px;
@@ -433,33 +542,59 @@ html {
 }
 
 .estrela-home .produto h3 a:hover {
-  color: var(--rosa-escuro);
+  color: var(--rosa-700);
 }
 
 .estrela-home .produto-preco {
+  align-self: flex-start;
   margin-top: auto;
-  padding-top: 4px;
+  margin-bottom: 2px;
+  padding: 4px 13px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #fbeaea, #f6dcd8);
+  color: var(--rosa-700);
   font-family: "Playfair Display", serif;
   font-weight: 700;
-  font-size: 18px;
-  color: var(--rosa-escuro);
+  font-size: 17px;
 }
 
 .estrela-home .btn-interesse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   margin-top: 8px;
-  padding: 11px;
+  padding: 12px;
   border: 0;
   border-radius: 30px;
-  background: var(--rosa);
+  background: linear-gradient(135deg, var(--rosa-viva), var(--rosa-700));
   color: #fff;
   font-size: 12px;
-  letter-spacing: 0.03em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
-  transition: 0.2s;
+  box-shadow: 0 10px 20px rgba(194, 95, 107, 0.28);
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.estrela-home .btn-interesse::after {
+  content: "→";
+  font-size: 15px;
+  transition: transform 0.2s;
 }
 
 .estrela-home .btn-interesse:hover {
-  background: var(--rosa-escuro);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px rgba(194, 95, 107, 0.4);
+}
+
+.estrela-home .btn-interesse:hover::after {
+  transform: translateX(3px);
 }
 
 .estrela-home .sem-produtos {
@@ -477,37 +612,54 @@ html {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 18px;
-  margin-top: 34px;
-  padding: 26px 4px;
-  border-top: 1px solid #f0dfd7;
-  border-bottom: 1px solid #f0dfd7;
-  text-align: center;
+  margin-top: 38px;
+  padding: 28px 4px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #fff, #fdf0ea);
+  box-shadow: 0 12px 28px rgba(191, 109, 115, 0.1);
 }
 
-.estrela-home .diferenciais div {
+.estrela-home .diferenciais > div {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  color: var(--rosa-escuro);
+  gap: 10px;
+  text-align: center;
+}
+
+.estrela-home .diferenciais > div span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fdeee9, #f7d9d4);
+  font-size: 21px;
+  box-shadow: inset 0 0 0 1px #f0d0cc;
 }
 
 .estrela-home .diferenciais p {
   margin: 0;
-  font-size: 11px;
-  letter-spacing: 0.6px;
-  color: var(--texto);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--marrom);
 }
 
+/* ---------- Rodapé ---------- */
 .estrela-home .rodape {
-  padding: 30px 0 20px;
+  margin-top: 40px;
+  padding: 30px 20px 26px;
+  border-radius: 22px;
+  background: linear-gradient(160deg, #5f3d33, #7a4f43);
+  color: #f7e6df;
   text-align: center;
+  box-shadow: 0 16px 34px rgba(95, 61, 51, 0.28);
 }
 
 .estrela-home .rodape-marca {
   font-family: "Great Vibes", cursive;
   font-size: 30px;
-  color: var(--rosa-escuro);
+  color: #fff;
 }
 
 .estrela-home .rodape p {
@@ -515,17 +667,45 @@ html {
   font-family: "Playfair Display", serif;
   font-style: italic;
   font-size: 16px;
-  color: var(--texto);
+  color: #f4ded6;
 }
 
 .estrela-home .rodape-sub {
   font-size: 11px;
   letter-spacing: 0.6px;
-  color: #b09a90;
+  color: #d9bcae;
+}
+
+.estrela-home .rodape-sub a {
+  color: #f3ddd2;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .estrela-home .rodape-sub a:hover {
-  color: var(--rosa-escuro);
+  color: #fff;
+}
+
+/* ---------- WhatsApp flutuante ---------- */
+.estrela-home .zap-flutuante {
+  position: fixed;
+  right: 16px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #37d67e, var(--whats));
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(34, 195, 94, 0.45);
+  animation: pulsar-zap 2.4s infinite;
+  transition: transform 0.2s;
+}
+
+.estrela-home .zap-flutuante:hover {
+  transform: scale(1.08);
 }
 
 /* ---------- Rodapé fixo ---------- */
@@ -538,7 +718,7 @@ html {
   padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--rosa-clara);
   background: #fff;
-  box-shadow: 0 -6px 18px #80564b0f;
+  box-shadow: 0 -6px 18px rgba(122, 80, 60, 0.08);
 }
 
 .estrela-home .rodape-fixo a,
@@ -560,7 +740,7 @@ html {
 
 .estrela-home .rodape-fixo a:hover,
 .estrela-home .rodape-fixo .ativo {
-  color: var(--rosa-escuro);
+  color: var(--rosa-700);
 }
 
 .estrela-home .rodape-fixo .rodape-icone {
@@ -577,11 +757,103 @@ html {
   height: 16px;
   padding: 0 4px;
   border-radius: 20px;
-  background: var(--rosa);
+  background: linear-gradient(135deg, var(--rosa-viva), var(--rosa-700));
   color: #fff;
   font-size: 10px;
   line-height: 16px;
   text-align: center;
+}
+
+/* ---------- Animações ---------- */
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes brilhar-botao {
+  0%,
+  100% {
+    box-shadow: 0 14px 30px rgba(194, 95, 107, 0.38);
+  }
+  50% {
+    box-shadow: 0 18px 40px rgba(194, 95, 107, 0.55);
+  }
+}
+
+@keyframes pulsar-zap {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(34, 195, 94, 0.5),
+      0 12px 26px rgba(34, 195, 94, 0.45);
+  }
+  70% {
+    box-shadow:
+      0 0 0 16px rgba(34, 195, 94, 0),
+      0 12px 26px rgba(34, 195, 94, 0.45);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(34, 195, 94, 0),
+      0 12px 26px rgba(34, 195, 94, 0.45);
+  }
+}
+
+@keyframes pulsar-suave {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .estrela-home .faixa-topo span,
+  .estrela-home .btn-encomenda,
+  .estrela-home .zap-flutuante,
+  .estrela-home .hero,
+  .estrela-home .cats,
+  .estrela-home .busca,
+  .estrela-home .produto {
+    animation: none !important;
+  }
+}
+
+/* ---------- Telas muito pequenas ---------- */
+@media (max-width: 380px) {
+  .estrela-home .logo-eg,
+  .estrela-home .hamburguer {
+    width: 42px;
+    height: 40px;
+  }
+
+  .estrela-home .topo-marca strong {
+    font-size: 21px;
+  }
+
+  .estrela-home .topo-marca span {
+    letter-spacing: 1.6px;
+  }
+
+  .estrela-home .faixa-topo {
+    font-size: 10px;
+    letter-spacing: 0.8px;
+  }
+
+  .estrela-home .btn-interesse {
+    font-size: 11px;
+  }
+
+  .estrela-home .produto-categoria {
+    font-size: 8px;
+  }
 }
 
 /* ---------- Desktop ---------- */
@@ -600,7 +872,7 @@ html {
 
   .estrela-home .hero {
     grid-template-columns: 1.05fr 0.95fr;
-    min-height: 420px;
+    min-height: 430px;
   }
 
   .estrela-home .hero-texto {
@@ -622,7 +894,7 @@ html {
 
   .estrela-home .produtos {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    gap: 22px;
   }
 
   .estrela-home .diferenciais {

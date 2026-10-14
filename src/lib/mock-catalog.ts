@@ -363,6 +363,8 @@ export const MOCK_CATALOG: CatalogData = {
       IMG.caixaSortidos,
       "/assets/03-personalizados/stitch-com-brigadeiros-variados.jpg",
     ],
+    hero_title: "Pequenos detalhes, grandes momentos",
+    hero_subtitle: "Brigadeiros que tornam a vida mais doce.",
   },
 };
 

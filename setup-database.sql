@@ -72,8 +72,15 @@ CREATE TABLE IF NOT EXISTS site_settings (
   order_info TEXT NOT NULL DEFAULT '',
   logo_url TEXT,
   hero_images TEXT[] NOT NULL DEFAULT '{}',
+  hero_title TEXT NOT NULL DEFAULT 'Pequenos detalhes, grandes momentos',
+  hero_subtitle TEXT NOT NULL DEFAULT 'Brigadeiros que tornam a vida mais doce.',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Garante as colunas de textos do hero em bancos já existentes
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_images TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_title TEXT NOT NULL DEFAULT 'Pequenos detalhes, grandes momentos';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS hero_subtitle TEXT NOT NULL DEFAULT 'Brigadeiros que tornam a vida mais doce.';
 
 -- Tabela de perfis
 CREATE TABLE IF NOT EXISTS profiles (

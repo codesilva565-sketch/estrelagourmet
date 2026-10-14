@@ -4,10 +4,7 @@ import type { CatalogData, Product } from "./catalog.types";
 import { MOCK_CATALOG, findMockProduct } from "./mock-catalog";
 
 function isDemoMode() {
-  return (
-    process.env["DEMO_MODE"] === "true" ||
-    import.meta.env["VITE_DEMO_MODE"] === "true"
-  );
+  return process.env["DEMO_MODE"] === "true" || import.meta.env["VITE_DEMO_MODE"] === "true";
 }
 
 async function signImagePaths<T extends { image_url: string }>(images: T[]) {
@@ -53,7 +50,7 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(
       supabaseAdmin
         .from("site_settings")
         .select(
-          "business_name,whatsapp_number,instagram_url,contact_info,order_info,logo_url,hero_images",
+          "business_name,whatsapp_number,instagram_url,contact_info,order_info,logo_url,hero_images,hero_title,hero_subtitle",
         )
         .eq("id", 1)
         .single(),

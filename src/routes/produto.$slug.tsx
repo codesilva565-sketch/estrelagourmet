@@ -1,21 +1,19 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  ArrowRight,
-  CakeSlice,
   ChevronLeft,
   ChevronRight,
   Gift,
   Heart,
   MessageCircle,
-  Minus,
-  Plus,
+  Package,
   ShoppingBag,
 } from "lucide-react";
 import { getProduct, getCatalog } from "@/lib/catalog.functions";
 import { useInterest } from "@/lib/interest-context";
 import type { Product } from "@/lib/catalog.types";
-import { toast } from "sonner";
+import { EncomendaModal } from "@/components/encomenda-modal";
+import "@/styles/estrela-produto.css";
 
 function formatBRL(value: number | null) {
   return value == null
@@ -33,10 +31,15 @@ export const Route = createFileRoute("/produto/$slug")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: loaderData.product ? `${loaderData.product.name} — Estrela Gourmet` : "Produto — Estrela Gourmet" },
+      {
+        title: loaderData.product
+          ? `${loaderData.product.name} — Estrela Gourmet`
+          : "Produto — Estrela Gourmet",
+      },
       {
         name: "description",
-        content: loaderData.product?.short_description || "Detalhes do produto artesanal Estrela Gourmet.",
+        content:
+          loaderData.product?.short_description || "Detalhes do produto artesanal Estrela Gourmet.",
       },
     ],
   }),
@@ -49,226 +52,171 @@ function ProductPage() {
   return <ProductDetail product={product} settings={settings} />;
 }
 
-function ProductDetail({ product, settings }: { product: Product; settings?: { whatsapp_number?: string } }) {
-  const { addItem, items } = useInterest();
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [variantId, setVariantId] = useState(
-    product.product_variations.find((v) => v.is_available)?.id ?? "",
-  );
-  const [quantity, setQuantity] = useState(1);
+function ProductDetail({
+  product,
+  settings,
+}: {
+  product: Product;
+  settings?: { whatsapp_number?: string };
+}) {
+  const { items } = useInterest();
+  const [fotoIndex, setFotoIndex] = useState(0);
+  const [opcao, setOpcao] = useState(0);
+  const [quantidade, setQuantidade] = useState(1);
+  const [encomendaAberta, setEncomendaAberta] = useState(false);
 
-  const selectedVariation = product.product_variations.find((v) => v.id === variantId) ?? null;
-  const images = product.product_images;
-  const currentImage = images[photoIndex];
-
-  function addToInterest() {
-    if (!product.is_available) return;
-    addItem({
-      productId: product.id,
-      productName: product.name,
-      quantity,
-      variationId: selectedVariation?.id ?? null,
-      variationName: selectedVariation?.name ?? null,
-      desiredDate: "",
-      notes: "",
-      imageUrl: images[0]?.image_url ?? null,
-    });
-    toast.success("Produto adicionado à lista de interesse.");
-  }
-
-  function openWhatsApp() {
-    const whatsapp = settings?.whatsapp_number || "5567999438984";
-    const variationText = selectedVariation ? ` (${selectedVariation.name})` : "";
-    const msg = `Olá! Tudo bem? 💗\n\nTenho interesse no produto: *${product.name}${variationText}*\nQuantidade: ${quantity}\n\nPoderiam me informar a disponibilidade e o valor?`;
-    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
-  }
+  const imagens = product.product_images ?? [];
+  const variacoes = product.product_variations ?? [];
+  const fotoAtual = imagens[fotoIndex];
+  const variacao = variacoes[opcao] ?? null;
+  const precoAtual = variacao ? variacao.price : product.price;
 
   return (
-    <div className="eg-site">
-      <div className="eg-page">
-        {/* Compact header for detail */}
-        <header className="eg-header eg-header-detail">
-          <div className="eg-brand">
-            <span className="eg-brand-name">Estrela Gourmet</span>
-          </div>
-          <div className="eg-header-actions">
-            <Link
-              to="/"
-              className="eg-icon-button"
-              aria-label="Voltar ao catálogo"
-            >
-              <ChevronLeft size={21} />
-            </Link>
-            <Link
-              to="/interesse"
-              className="eg-icon-button eg-bag"
-              aria-label="Lista de interesse"
-            >
-              <ShoppingBag size={22} />
-              {items.length > 0 && (
-                <span className="eg-bag-count">{items.length}</span>
-              )}
-            </Link>
-          </div>
-        </header>
+    <div className="estrela-produto">
+      <header className="top-bar">
+        <Link className="icone-redondo" to="/" aria-label="Voltar para a loja">
+          <ChevronLeft size={22} />
+        </Link>
+        <Link className="logo" to="/">
+          Estrela Gourmet
+        </Link>
+        <Link className="carrinho" to="/interesse" aria-label="Minha lista de interesse">
+          <ShoppingBag size={21} />
+          {items.length > 0 && <span className="badge">{items.length}</span>}
+        </Link>
+      </header>
 
-        <main className="eg-detail">
-          <div className="eg-detail-nav">
-            <button
-              onClick={() => window.history.back()}
-              aria-label="Voltar ao catálogo"
-            >
-              <ChevronLeft size={22} />
-              <span>Voltar ao cardápio</span>
-            </button>
-            <span className="eg-detail-script">Estrela Gourmet</span>
-            <div />
-          </div>
+      <div className="product-wrapper">
+        <div className="img-box">
+          {fotoAtual?.image_url ? (
+            <img src={fotoAtual.image_url} alt={fotoAtual.alt_text || product.name} />
+          ) : (
+            <div className="sem-foto">
+              <Package size={56} />
+            </div>
+          )}
 
-          <div className="eg-detail-columns">
-            {/* Gallery */}
-            <div className="eg-gallery">
-              <div className="eg-detail-image">
-                {currentImage?.image_url ? (
-                  <img
-                    src={currentImage.image_url}
-                    alt={currentImage.alt_text || `${product.name}, fotografia ${photoIndex + 1}`}
+          {imagens.length > 1 && (
+            <>
+              <button
+                className="gallery-nav prev"
+                type="button"
+                aria-label="Foto anterior"
+                onClick={() => setFotoIndex((i) => (i + imagens.length - 1) % imagens.length)}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                className="gallery-nav next"
+                type="button"
+                aria-label="Próxima foto"
+                onClick={() => setFotoIndex((i) => (i + 1) % imagens.length)}
+              >
+                <ChevronRight size={20} />
+              </button>
+              <div className="gallery-dots">
+                {imagens.map((foto, i) => (
+                  <button
+                    key={foto.id}
+                    type="button"
+                    className={fotoIndex === i ? "active" : ""}
+                    aria-label={`Ver foto ${i + 1}`}
+                    aria-pressed={fotoIndex === i}
+                    onClick={() => setFotoIndex(i)}
                   />
-                ) : (
-                  <div className="grid h-full place-items-center text-primary/30">
-                    <CakeSlice size={48} />
-                  </div>
-                )}
-                {images.length > 1 && (
-                  <>
-                    <button
-                      className="eg-gallery-prev"
-                      aria-label="Foto anterior"
-                      onClick={() =>
-                        setPhotoIndex((i) => (i + images.length - 1) % images.length)
-                      }
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
-                    <button
-                      className="eg-gallery-next"
-                      aria-label="Próxima foto"
-                      onClick={() =>
-                        setPhotoIndex((i) => (i + 1) % images.length)
-                      }
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </>
-                )}
+                ))}
               </div>
-              {images.length > 1 && (
-                <div className="eg-gallery-dots">
-                  {images.map((photo, i) => (
-                    <button
-                      key={photo.id}
-                      className={photoIndex === i ? "eg-dot-current" : ""}
-                      aria-label={`Ver fotografia ${i + 1}`}
-                      aria-pressed={photoIndex === i}
-                      onClick={() => setPhotoIndex(i)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            </>
+          )}
+        </div>
 
-            {/* Info */}
-            <div className="eg-detail-info">
-              <h1>{product.name}</h1>
-              <p className="eg-detail-price">
-                {selectedVariation
-                  ? formatBRL(selectedVariation.price)
-                  : formatBRL(product.price)}
-              </p>
-              <p className="eg-detail-description">
-                {product.description || product.short_description}
-              </p>
+        <div className="info">
+          <h1>{product.name}</h1>
+          <div className="price">{formatBRL(precoAtual)}</div>
+          <p className="desc">{product.description || product.short_description}</p>
 
-              <div className="eg-detail-features">
-                <span>
-                  <CakeSlice size={24} /> Artesanal
-                </span>
-                <span>
-                  <Gift size={24} /> Para presentear
-                </span>
-                <span>
-                  <Heart size={24} /> Feito com amor
-                </span>
-              </div>
+          <div className="icons">
+            <span>
+              <Package size={22} /> Artesanal
+            </span>
+            <span>
+              <Gift size={22} /> Para presentear
+            </span>
+            <span>
+              <Heart size={22} /> Feito com amor
+            </span>
+          </div>
 
-              {product.product_variations.length > 0 ? (
-                <fieldset className="eg-variants">
-                  <legend>Selecione uma opção:</legend>
-                  <div>
-                    {product.product_variations.map((v) => (
-                      <button
-                        type="button"
-                        className={variantId === v.id ? "eg-chosen" : ""}
-                        aria-pressed={variantId === v.id}
-                        key={v.id}
-                        disabled={!v.is_available}
-                        onClick={() => setVariantId(v.id)}
-                      >
-                        {v.name}
-                        <small>{formatBRL(v.price)}</small>
-                      </button>
-                    ))}
-                  </div>
-                </fieldset>
-              ) : (
-                <p className="eg-variants-note">
-                  Opções e valores serão confirmados pelo WhatsApp.
-                </p>
-              )}
-
-              <div className="eg-quantity">
-                <span>Quantidade</span>
-                <div>
+          {variacoes.length > 0 && (
+            <>
+              <div className="secao-label">Selecione uma opção:</div>
+              <div className="options">
+                {variacoes.map((item, index) => (
                   <button
-                    aria-label="Diminuir quantidade"
-                    disabled={quantity === 1}
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    key={item.id}
+                    type="button"
+                    className={`opt ${opcao === index ? "active" : ""}`}
+                    aria-pressed={opcao === index}
+                    onClick={() => setOpcao(index)}
                   >
-                    <Minus size={17} />
+                    <b>{item.name}</b>
+                    <span>{formatBRL(item.price)}</span>
                   </button>
-                  <strong>{quantity}</strong>
-                  <button
-                    aria-label="Aumentar quantidade"
-                    disabled={quantity === 99}
-                    onClick={() => setQuantity((q) => Math.min(99, q + 1))}
-                  >
-                    <Plus size={17} />
-                  </button>
-                </div>
+                ))}
               </div>
+            </>
+          )}
 
+          <div className="qty-row">
+            <span>Quantidade</span>
+            <div className="qty-ctrl">
               <button
-                className="eg-detail-cta"
-                disabled={!product.is_available}
-                onClick={addToInterest}
+                className="qty-btn"
+                type="button"
+                aria-label="Diminuir quantidade"
+                disabled={quantidade <= 1}
+                onClick={() => setQuantidade((q) => Math.max(1, q - 1))}
               >
-                <MessageCircle size={21} /> Tenho interesse <ArrowRight size={18} />
+                −
               </button>
+              <strong>{quantidade}</strong>
               <button
-                className="eg-detail-cta eg-detail-whatsapp"
-                disabled={!product.is_available}
-                onClick={openWhatsApp}
+                className="qty-btn"
+                type="button"
+                aria-label="Aumentar quantidade"
+                disabled={quantidade >= 99}
+                onClick={() => setQuantidade((q) => Math.min(99, q + 1))}
               >
-                <MessageCircle size={21} /> Fazer pedido agora
+                +
               </button>
-              <p className="eg-detail-disclaimer">
-                Consulta sem compromisso. A disponibilidade e o valor serão confirmados pela
-                confeiteira.
-              </p>
             </div>
           </div>
-        </main>
+
+          <button
+            className="btn btn-green"
+            type="button"
+            disabled={!product.is_available}
+            onClick={() => setEncomendaAberta(true)}
+          >
+            <MessageCircle size={20} /> Fazer pedido agora
+          </button>
+
+          <p className="disclaimer">
+            Consulta sem compromisso. A disponibilidade e o valor serão confirmados pela
+            confeiteira.
+          </p>
+        </div>
       </div>
+
+      {encomendaAberta && (
+        <EncomendaModal
+          product={product}
+          variation={variacao}
+          quantity={quantidade}
+          whatsappNumber={settings?.whatsapp_number ?? ""}
+          onClose={() => setEncomendaAberta(false)}
+        />
+      )}
     </div>
   );
 }
