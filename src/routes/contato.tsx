@@ -6,9 +6,9 @@ export const Route = createFileRoute("/contato")({
   loader: () => getCatalog(),
   head: () => ({
     meta: [
-      { title: "Contato — Estela Gourmet" },
-      { name: "description", content: "Fale com a Estela Gourmet para consultar sua encomenda." },
-      { property: "og:title", content: "Contato — Estela Gourmet" },
+      { title: "Contato — Estrela Gourmet" },
+      { name: "description", content: "Fale com a Estrela Gourmet para consultar sua encomenda." },
+      { property: "og:title", content: "Contato — Estrela Gourmet" },
       { property: "og:description", content: "Consulte doces e encomendas pelo WhatsApp." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -23,7 +23,7 @@ function Contact() {
       <div className="eg-page">
         <header className="eg-header eg-header-detail">
           <div className="eg-brand">
-            <span className="eg-brand-name">Estela Gourmet</span>
+            <span className="eg-brand-name">Estrela Gourmet</span>
           </div>
           <div className="eg-header-actions">
             <Link to="/" className="eg-icon-button" aria-label="Voltar ao catálogo">

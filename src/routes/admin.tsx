@@ -50,13 +50,13 @@ export const Route = createFileRoute("/admin")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Área da proprietária — Estela Gourmet" },
+      { title: "Área da proprietária — Estrela Gourmet" },
       {
         name: "description",
-        content: "Acesso seguro para administrar o catálogo Estela Gourmet.",
+        content: "Acesso seguro para administrar o catálogo Estrela Gourmet.",
       },
-      { property: "og:title", content: "Área da proprietária — Estela Gourmet" },
-      { property: "og:description", content: "Administração segura do catálogo Estela Gourmet." },
+      { property: "og:title", content: "Área da proprietária — Estrela Gourmet" },
+      { property: "og:description", content: "Administração segura do catálogo Estrela Gourmet." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex,nofollow" },
@@ -178,7 +178,7 @@ function LoginForm() {
             <ArrowLeft />
           </Link>
         </Button>
-        <p className="mt-5 font-script text-4xl text-primary">Estela Gourmet</p>
+        <p className="mt-5 font-script text-4xl text-primary">Estrela Gourmet</p>
         <h1 className="font-display text-4xl font-semibold">Área da proprietária</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Entre para editar produtos, fotos e informações do catálogo.
@@ -286,7 +286,7 @@ function Dashboard({
       <header className="border-b border-border bg-card">
         <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-4 sm:flex sm:justify-between sm:px-6">
           <div className="min-w-0">
-            <p className="truncate font-script text-3xl text-primary">Estela Gourmet</p>
+            <p className="truncate font-script text-3xl text-primary">Estrela Gourmet</p>
             <h1 className="truncate font-display text-2xl font-semibold">Painel do catálogo</h1>
           </div>
           <div className="flex shrink-0 gap-1">
@@ -942,7 +942,7 @@ function SettingsForm({
   const save = useServerFn(saveSiteSettings);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
-    business_name: settings?.business_name ?? "Estela Gourmet",
+    business_name: settings?.business_name ?? "Estrela Gourmet",
     whatsapp_number: settings?.whatsapp_number ?? "",
     instagram_url: settings?.instagram_url ?? "",
     contact_info: settings?.contact_info ?? "",
@@ -1162,7 +1162,7 @@ function SettingsForm({
         <Input
           inputMode="numeric"
           maxLength={18}
-          placeholder="5567999999999"
+          placeholder="5567999438984"
           value={form.whatsapp_number}
           onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
         />

@@ -1,6 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { CatalogData, Product } from "./catalog.types";
+import { MOCK_CATALOG, findMockProduct } from "./mock-catalog";
+
+function isDemoMode() {
+  return (
+    process.env["DEMO_MODE"] === "true" ||
+    import.meta.env["VITE_DEMO_MODE"] === "true"
+  );
+}
 
 async function signImagePaths<T extends { image_url: string }>(images: T[]) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -27,6 +35,7 @@ async function signCatalogPath(path: string | null): Promise<string | null> {
 
 export const getCatalog = createServerFn({ method: "GET" }).handler(
   async (): Promise<CatalogData> => {
+    if (isDemoMode()) return MOCK_CATALOG;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [categoriesResult, productsResult, settingsResult] = await Promise.all([
       supabaseAdmin
@@ -81,6 +90,7 @@ export const getProduct = createServerFn({ method: "GET" })
     z.object({ slug: z.string().trim().min(1).max(140) }).parse(input),
   )
   .handler(async ({ data }): Promise<Product | null> => {
+    if (isDemoMode()) return findMockProduct(data.slug);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: product, error } = await supabaseAdmin
       .from("products")

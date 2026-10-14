@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS product_variations (
 -- Tabela de configurações do site
 CREATE TABLE IF NOT EXISTS site_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
-  business_name TEXT NOT NULL DEFAULT 'Estela Gourmet',
+  business_name TEXT NOT NULL DEFAULT 'Estrela Gourmet',
   whatsapp_number TEXT NOT NULL DEFAULT '5500000000000',
   instagram_url TEXT NOT NULL DEFAULT '',
   contact_info TEXT NOT NULL DEFAULT '',
@@ -160,7 +160,7 @@ INSERT INTO product_variations (product_id, name, price, display_order) VALUES
 
 -- Configurações do site
 INSERT INTO site_settings (id, business_name, whatsapp_number, instagram_url, contact_info, order_info) VALUES
-(1, 'Estela Gourmet', '5511999999999', '@estrelagourmet', 'Vicentina - RJ', 'Encomendas com até 3 dias de antecedência')
+(1, 'Estrela Gourmet', '5511999999999', '@estrelagourmet', 'Vicentina - RJ', 'Encomendas com até 3 dias de antecedência')
 ON CONFLICT (id) DO UPDATE SET
   business_name = EXCLUDED.business_name,
   whatsapp_number = EXCLUDED.whatsapp_number;

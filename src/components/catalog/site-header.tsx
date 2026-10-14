@@ -18,7 +18,7 @@ export function SiteHeader({
       <header className={`eg-header ${variant === "detail" ? "eg-header-detail" : ""}`}>
         <Link to="/" className="eg-logo-button" aria-label="Voltar ao início">
           {logoUrl ? (
-            <img className="eg-logo" src={logoUrl} alt="Logotipo oficial Estela Gourmet" />
+            <img className="eg-logo" src={logoUrl} alt="Logotipo oficial Estrela Gourmet" />
           ) : (
             <span className="grid h-full place-items-center font-script text-lg text-primary">
               EG
@@ -26,9 +26,9 @@ export function SiteHeader({
           )}
         </Link>
 
-        <div className="eg-brand" aria-label="Estela Gourmet — Brigadeiros Gourmet">
+        <div className="eg-brand" aria-label="Estrela Gourmet — Brigadeiros Gourmet">
           <span className="eg-brand-name">
-            Estela Gourmet<span className="eg-brand-heart">♡</span>
+            Estrela Gourmet<span className="eg-brand-heart">♡</span>
           </span>
           <span className="eg-brand-subtitle">BRIGADEIROS GOURMET</span>
           <span className="eg-brand-rule">

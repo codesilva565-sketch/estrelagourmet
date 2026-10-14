@@ -33,10 +33,10 @@ export const Route = createFileRoute("/produto/$slug")({
   },
   head: ({ loaderData }) => ({
     meta: [
-      { title: loaderData.product ? `${loaderData.product.name} — Estela Gourmet` : "Produto — Estela Gourmet" },
+      { title: loaderData.product ? `${loaderData.product.name} — Estrela Gourmet` : "Produto — Estrela Gourmet" },
       {
         name: "description",
-        content: loaderData.product?.short_description || "Detalhes do produto artesanal Estela Gourmet.",
+        content: loaderData.product?.short_description || "Detalhes do produto artesanal Estrela Gourmet.",
       },
     ],
   }),
@@ -89,7 +89,7 @@ function ProductDetail({ product, settings }: { product: Product; settings?: { w
         {/* Compact header for detail */}
         <header className="eg-header eg-header-detail">
           <div className="eg-brand">
-            <span className="eg-brand-name">Estela Gourmet</span>
+            <span className="eg-brand-name">Estrela Gourmet</span>
           </div>
           <div className="eg-header-actions">
             <Link
@@ -121,7 +121,7 @@ function ProductDetail({ product, settings }: { product: Product; settings?: { w
               <ChevronLeft size={22} />
               <span>Voltar ao cardápio</span>
             </button>
-            <span className="eg-detail-script">Estela Gourmet</span>
+            <span className="eg-detail-script">Estrela Gourmet</span>
             <div />
           </div>
 
