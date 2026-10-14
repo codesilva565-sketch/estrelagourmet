@@ -15,6 +15,16 @@ async function signImagePaths<T extends { image_url: string }>(images: T[]) {
   );
 }
 
+async function signCatalogPath(path: string | null): Promise<string | null> {
+  if (!path) return path;
+  if (path.startsWith("http") || path.startsWith("/")) return path;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.storage
+    .from("catalog-images")
+    .createSignedUrl(path, 60 * 60);
+  return data?.signedUrl ?? "";
+}
+
 export const getCatalog = createServerFn({ method: "GET" }).handler(
   async (): Promise<CatalogData> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -33,7 +43,9 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(
         .order("display_order"),
       supabaseAdmin
         .from("site_settings")
-        .select("business_name,whatsapp_number,instagram_url,contact_info,order_info,logo_url")
+        .select(
+          "business_name,whatsapp_number,instagram_url,contact_info,order_info,logo_url,hero_images",
+        )
         .eq("id", 1)
         .single(),
     ]);
@@ -51,10 +63,15 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(
         ),
       })),
     );
+    const settings = settingsResult.data;
     return {
       categories: categoriesResult.data ?? [],
       products,
-      settings: settingsResult.data,
+      settings: settings && {
+        ...settings,
+        logo_url: await signCatalogPath(settings.logo_url),
+        hero_images: await Promise.all((settings.hero_images ?? []).map(signCatalogPath)),
+      },
     } as CatalogData;
   },
 );

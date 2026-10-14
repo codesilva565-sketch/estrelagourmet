@@ -44,6 +44,7 @@ export type SiteSettings = {
   contact_info: string;
   order_info: string;
   logo_url: string | null;
+  hero_images: string[];
 };
 
 export type CatalogData = {

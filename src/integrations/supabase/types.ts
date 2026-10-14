@@ -204,6 +204,7 @@ export type Database = {
         Row: {
           business_name: string;
           contact_info: string;
+          hero_images: string[];
           id: number;
           instagram_url: string;
           logo_url: string | null;
@@ -214,6 +215,7 @@ export type Database = {
         Insert: {
           business_name?: string;
           contact_info?: string;
+          hero_images?: string[];
           id?: number;
           instagram_url?: string;
           logo_url?: string | null;
@@ -224,6 +226,7 @@ export type Database = {
         Update: {
           business_name?: string;
           contact_info?: string;
+          hero_images?: string[];
           id?: number;
           instagram_url?: string;
           logo_url?: string | null;

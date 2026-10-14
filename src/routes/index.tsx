@@ -14,14 +14,6 @@ import { ProductCard } from "@/components/catalog/product-card";
 import { SiteHeader } from "@/components/catalog/site-header";
 import { getCatalog } from "@/lib/catalog.functions";
 
-const CAROUSEL_SLIDES = [
-  "/assets/02-brigadeiros/brigadeiro-chocolate-close.jpg",
-  "/assets/03-personalizados/alice-personagem-close.jpg",
-  "/assets/03-personalizados/angel-close-rosa.jpg",
-  "/assets/03-personalizados/alice-chave-dourada-close.jpg",
-  "/assets/04-caixas/caixa-brigadeiros-sortidos.jpg",
-];
-
 const CATEGORY_PHOTOS: Record<string, string> = {};
 
 function resolveCategoryPhoto(name: string): string | null {
@@ -56,13 +48,13 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-function HeroCarousel() {
+function HeroCarousel({ images }: { images: string[] }) {
   const [current, setCurrent] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(null);
 
   const advance = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
-  }, []);
+    setCurrent((prev) => (prev + 1) % images.length);
+  }, [images.length]);
 
   useEffect(() => {
     timerRef.current = setInterval(advance, 3500);
@@ -75,14 +67,14 @@ function HeroCarousel() {
         className="eg-hero-carousel"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
-        {CAROUSEL_SLIDES.map((src, i) => (
+        {images.map((src, i) => (
           <div className="eg-hero-slide" key={i}>
             <img src={src} alt="" loading={i === 0 ? "eager" : "lazy"} />
           </div>
         ))}
       </div>
       <div className="eg-hero-dots">
-        {CAROUSEL_SLIDES.map((_, i) => (
+        {images.map((_, i) => (
           <button
             key={i}
             className={`eg-hero-dot ${i === current ? "eg-active" : ""}`}
@@ -127,6 +119,9 @@ function HomePage() {
         : visible.slice(0, 6);
 
   const settings = data.settings;
+  const heroImages = (settings?.hero_images && settings.hero_images.length > 0)
+    ? settings.hero_images
+    : ["/assets/02-brigadeiros/brigadeiro-chocolate-close.jpg", "/assets/03-personalizados/alice-personagem-close.jpg", "/assets/03-personalizados/angel-close-rosa.jpg", "/assets/03-personalizados/alice-chave-dourada-close.jpg", "/assets/04-caixas/caixa-brigadeiros-sortidos.jpg"];
 
   return (
     <div className="eg-site">
@@ -134,17 +129,20 @@ function HomePage() {
         <SiteHeader logoUrl={settings.logo_url} variant="home" />
 
         <main>
-          {/* Hero */}
-          <section className="eg-hero" aria-label="Apresentação Estela Gourmet">
-            <div className="eg-hero-copy">
+          {/* Carrossel — diretamente abaixo do header */}
+          <section className="eg-hero" aria-label="Fotografias principais">
+            <HeroCarousel images={heroImages} />
+          </section>
+
+          {/* Seção de apresentação e encomenda */}
+          <section className="eg-presentation" aria-label="Apresentação">
+            <div className="eg-presentation-content">
               <h1>
                 Pequenos detalhes,
                 <br />
                 <em>grandes</em> <em>momentos</em>
               </h1>
-              <p>
-                BRIGADEIROS QUE TORNAM A VIDA MAIS DOCE!
-              </p>
+              <p>BRIGADEIROS QUE TORNAM A VIDA MAIS DOCE!</p>
               <button
                 className="eg-hero-cta"
                 onClick={() =>
@@ -154,10 +152,9 @@ function HomePage() {
                 FAÇA SUA ENCOMENDA <ArrowRight size={16} />
               </button>
             </div>
-            <HeroCarousel />
           </section>
 
-          {/* Categories */}
+          {/* Categorias */}
           <section className="eg-categories" aria-label="Categorias">
             {data.categories.map((cat) => {
               const photo = CATEGORY_PHOTOS[cat.id] ?? resolveCategoryPhoto(cat.name);

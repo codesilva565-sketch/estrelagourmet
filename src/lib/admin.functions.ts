@@ -43,6 +43,8 @@ const settingsSchema = z.object({
   instagram_url: z.union([z.literal(""), z.string().trim().url().max(500)]),
   contact_info: z.string().trim().max(1000),
   order_info: z.string().trim().max(1000),
+  logo_url: z.string().nullable().optional(),
+  hero_images: z.array(z.string().trim()).max(10).optional(),
 });
 
 async function assertAdmin(supabase: SupabaseClient<Database>, userId: string) {
@@ -192,7 +194,56 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
   .inputValidator((input) => settingsSchema.parse(input))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { error } = await context.supabase.from("site_settings").update(data).eq("id", 1);
+    const { hero_images, logo_url, ...rest } = data;
+    const updateData: Database["public"]["Tables"]["site_settings"]["Update"] = { ...rest };
+    if (logo_url !== undefined) updateData.logo_url = logo_url;
+    if (hero_images) updateData.hero_images = hero_images;
+    const { error } = await context.supabase.from("site_settings").update(updateData).eq("id", 1);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const uploadSiteImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        type: z.enum(["logo", "hero"]),
+        file: z.string(),
+        altText: z.string().trim().max(200),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { type, file, altText } = data;
+    const extension = file.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `site/${type}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await context.supabase.storage
+      .from("catalog-images")
+      .upload(path, Buffer.from(file, "base64"), {
+        contentType: `image/${extension === "jpg" ? "jpeg" : extension}`,
+        upsert: false,
+      });
+    if (uploadError) throw new Error(uploadError.message);
+    const { data: publicData } = context.supabase.storage.from("catalog-images").getPublicUrl(path);
+    return { path, url: publicData.publicUrl };
+  });
+
+export const deleteSiteImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        type: z.enum(["logo", "hero"]),
+        path: z.string().min(1).max(500),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { path } = data;
+    const { error } = await context.supabase.storage.from("catalog-images").remove([path]);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -200,7 +251,11 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
 const categorySchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(60),
-  slug: z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80),
+  slug: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .max(80),
   icon: z.string().trim().max(60).nullable(),
   display_order: z.number().int().min(0).max(999),
 });
@@ -214,7 +269,8 @@ export const saveCategory = createServerFn({ method: "POST" })
     const result = id
       ? await context.supabase.from("categories").update(values).eq("id", id).select("id").single()
       : await context.supabase.from("categories").insert(values).select("id").single();
-    if (result.error || !result.data) throw new Error(result.error?.message ?? "Não foi possível salvar a categoria.");
+    if (result.error || !result.data)
+      throw new Error(result.error?.message ?? "Não foi possível salvar a categoria.");
     return { id: result.data.id };
   });
 

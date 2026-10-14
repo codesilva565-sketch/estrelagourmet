@@ -16,6 +16,7 @@ import {
   Store,
   Tags,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -473,8 +474,14 @@ function ProductEditor({
     const valid: File[] = [];
     for (const file of Array.from(files)) {
       const error = validateFile(file);
-      if (error) { toast.error(error); continue; }
-      if (valid.length >= 8) { toast.error("Máximo 8 imagens por vez."); break; }
+      if (error) {
+        toast.error(error);
+        continue;
+      }
+      if (valid.length >= 8) {
+        toast.error("Máximo 8 imagens por vez.");
+        break;
+      }
       valid.push(file);
     }
     if (valid.length === 0) return;
@@ -489,9 +496,20 @@ function ProductEditor({
   }
   async function handleAddUrl() {
     const url = urlInput.trim();
-    if (!url) { toast.error("Informe uma URL válida."); return; }
-    try { new URL(url); } catch { toast.error("URL inválida."); return; }
-    if (!form.id) { toast.error("Salve o produto antes de adicionar imagem por URL."); return; }
+    if (!url) {
+      toast.error("Informe uma URL válida.");
+      return;
+    }
+    try {
+      new URL(url);
+    } catch {
+      toast.error("URL inválida.");
+      return;
+    }
+    if (!form.id) {
+      toast.error("Salve o produto antes de adicionar imagem por URL.");
+      return;
+    }
     setBusy(true);
     try {
       await addImageUrl({
@@ -907,6 +925,13 @@ function ProductEditor({
   );
 }
 
+async function signStoragePath(path: string | null): Promise<string | null> {
+  if (!path) return path;
+  if (path.startsWith("http") || path.startsWith("/")) return path;
+  const { data } = await supabase.storage.from("catalog-images").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? "";
+}
+
 function SettingsForm({
   settings,
   onSaved,
@@ -923,6 +948,188 @@ function SettingsForm({
     contact_info: settings?.contact_info ?? "",
     order_info: settings?.order_info ?? "",
   });
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoPending, setLogoPending] = useState<File | null>(null);
+  const [heroPaths, setHeroPaths] = useState<string[]>(settings?.hero_images ?? []);
+  const [heroDisplay, setHeroDisplay] = useState<string[]>([]);
+  const [heroPending, setHeroPending] = useState<File[]>([]);
+  const [heroPreviews, setHeroPreviews] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const [logo, heroes] = await Promise.all([
+        signStoragePath(settings?.logo_url ?? null),
+        Promise.all(
+          (settings?.hero_images ?? []).map(async (p) => (await signStoragePath(p)) ?? ""),
+        ),
+      ]);
+      if (!active) return;
+      setLogoPreview(logo);
+      setHeroPaths(settings?.hero_images ?? []);
+      setHeroDisplay(heroes);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [settings]);
+
+  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.match(/^image\/(jpeg|png|webp|avif)$/)) {
+      toast.error("Formato não suportado.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Máximo 8 MB.");
+      return;
+    }
+    setLogoPending(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
+  function handleHeroUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    const valid: File[] = [];
+    for (const file of Array.from(files)) {
+      if (!file.type.match(/^image\/(jpeg|png|webp|avif)$/)) {
+        toast.error(`${file.name}: formato não suportado.`);
+        continue;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        toast.error(`${file.name}: máximo 8 MB.`);
+        continue;
+      }
+      if (heroPaths.length + heroPending.length + valid.length >= 10) {
+        toast.error("Máximo 10 imagens de capa.");
+        break;
+      }
+      valid.push(file);
+    }
+    if (valid.length === 0) return;
+    const previews = valid.map((f) => URL.createObjectURL(f));
+    setHeroPending((prev) => [...prev, ...valid]);
+    setHeroPreviews((prev) => [...prev, ...previews]);
+  }
+
+  async function handleLogoSave() {
+    if (!logoPending) return;
+    setBusy(true);
+    try {
+      const extension = logoPending.name.split(".").pop()?.toLowerCase() ?? "jpg";
+      const path = `site/logo/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage
+        .from("catalog-images")
+        .upload(path, logoPending, { contentType: logoPending.type, upsert: false });
+      if (error) throw error;
+      await save({
+        data: { ...form, whatsapp_number: form.whatsapp_number.replace(/\D/g, ""), logo_url: path },
+      });
+      setLogoPending(null);
+      setLogoPreview(await signStoragePath(path));
+      await onSaved();
+      toast.success("Logo atualizado.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao fazer upload do logo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleHeroSave() {
+    if (heroPending.length === 0) return;
+    setBusy(true);
+    try {
+      const newPaths: string[] = [];
+      for (const file of heroPending) {
+        const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+        const path = `site/hero/${crypto.randomUUID()}.${extension}`;
+        const { error } = await supabase.storage
+          .from("catalog-images")
+          .upload(path, file, { contentType: file.type, upsert: false });
+        if (error) throw error;
+        newPaths.push(path);
+      }
+      const updatedPaths = [...heroPaths, ...newPaths];
+      await save({
+        data: {
+          ...form,
+          whatsapp_number: form.whatsapp_number.replace(/\D/g, ""),
+          hero_images: updatedPaths,
+        },
+      });
+      const newPreviews = await Promise.all(
+        newPaths.map(async (p) => (await signStoragePath(p)) ?? ""),
+      );
+      setHeroPaths(updatedPaths);
+      setHeroDisplay((prev) => [...prev, ...newPreviews]);
+      heroPreviews.forEach((p) => URL.revokeObjectURL(p));
+      setHeroPending([]);
+      setHeroPreviews([]);
+      await onSaved();
+      toast.success("Fotos de capa atualizadas.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao fazer upload das fotos de capa.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleRemoveLogo() {
+    setBusy(true);
+    void (async () => {
+      try {
+        await save({
+          data: {
+            ...form,
+            whatsapp_number: form.whatsapp_number.replace(/\D/g, ""),
+            logo_url: null,
+          },
+        });
+        setLogoPreview(null);
+        await onSaved();
+        toast.success("Logo removido.");
+      } catch {
+        toast.error("Erro ao remover logo.");
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }
+
+  async function handleRemoveHero(index: number) {
+    setBusy(true);
+    try {
+      const newPaths = heroPaths.filter((_, i) => i !== index);
+      await save({
+        data: {
+          ...form,
+          whatsapp_number: form.whatsapp_number.replace(/\D/g, ""),
+          hero_images: newPaths,
+        },
+      });
+      setHeroPaths(newPaths);
+      setHeroDisplay((prev) => prev.filter((_, i) => i !== index));
+      await onSaved();
+      toast.success("Foto de capa removida.");
+    } catch (error) {
+      toast.error("Erro ao remover foto de capa.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleRemovePendingHero(index: number) {
+    const preview = heroPreviews[index];
+    if (preview) URL.revokeObjectURL(preview);
+    setHeroPending((prev) => prev.filter((_, i) => i !== index));
+    setHeroPreviews((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -936,6 +1143,7 @@ function SettingsForm({
       setBusy(false);
     }
   }
+
   return (
     <form
       onSubmit={submit}
@@ -982,6 +1190,135 @@ function SettingsForm({
           onChange={(e) => setForm({ ...form, order_info: e.target.value })}
         />
       </Field>
+
+      {/* Logo upload */}
+      <section className="rounded-lg border border-border bg-card p-4 sm:p-6">
+        <h3 className="font-display text-2xl font-semibold mb-3">Logo do Header</h3>
+        <div className="flex items-center gap-4 mb-3">
+          {logoPreview && (
+            <img
+              src={logoPreview}
+              alt="Logo atual"
+              className="h-16 w-16 object-contain rounded-md border"
+            />
+          )}
+          {!logoPreview && (
+            <div className="h-16 w-16 rounded-md border border-dashed bg-secondary flex items-center justify-center text-xs text-muted-foreground">
+              Sem logo
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
+            <Upload size={16} /> Trocar logo
+            <Input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              className="sr-only"
+              onChange={handleLogoUpload}
+            />
+          </Label>
+          {logoPending && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleLogoSave()}
+              disabled={busy}
+            >
+              {busy && <Loader2 className="animate-spin h-3 w-3 mr-1" />} Salvar logo
+            </Button>
+          )}
+          {settings?.logo_url && (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={() => void handleRemoveLogo()}
+              disabled={busy}
+            >
+              <X size={16} /> Remover
+            </Button>
+          )}
+        </div>
+      </section>
+
+      {/* Hero images upload */}
+      <section className="rounded-lg border border-border bg-card p-4 sm:p-6">
+        <h3 className="font-display text-2xl font-semibold mb-3">Fotos de Capa (Carrossel)</h3>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {heroDisplay.map((preview, index) => (
+            <div
+              key={`saved-${index}`}
+              className="relative aspect-video overflow-hidden rounded-md bg-secondary"
+            >
+              <img src={preview} alt={`Capa ${index + 1}`} className="h-full w-full object-cover" />
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute right-1 top-1"
+                onClick={() => void handleRemoveHero(index)}
+                disabled={busy}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
+          ))}
+          {heroPreviews.map((preview, index) => (
+            <div
+              key={`pending-${index}`}
+              className="relative aspect-video overflow-hidden rounded-md bg-secondary ring-2 ring-primary/40"
+            >
+              <img
+                src={preview}
+                alt={`Nova capa ${index + 1}`}
+                className="h-full w-full object-cover"
+              />
+              <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                nova
+              </span>
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute right-1 top-1"
+                onClick={() => handleRemovePendingHero(index)}
+                disabled={busy}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Label className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
+            <Upload size={16} /> Adicionar fotos de capa
+            <Input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              multiple
+              className="sr-only"
+              onChange={handleHeroUpload}
+            />
+          </Label>
+          {heroPending.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleHeroSave()}
+              disabled={busy}
+            >
+              {busy && <Loader2 className="animate-spin h-3 w-3 mr-1" />} Salvar fotos
+            </Button>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Formatos: JPG, PNG, WEBP, AVIF. Máximo 8 MB por imagem. Até 10 fotos de capa.
+        </p>
+      </section>
+
       <Button type="submit" disabled={busy} className="justify-self-start">
         {busy ? <Loader2 className="animate-spin" /> : <Save />} Salvar configurações
       </Button>
@@ -1097,12 +1434,19 @@ function CategoryManager({
           >
             <div>
               <p className="font-display text-lg font-semibold">{cat.name}</p>
-              <p className="text-xs text-muted-foreground">/{cat.slug} — ordem {cat.display_order}</p>
+              <p className="text-xs text-muted-foreground">
+                /{cat.slug} — ordem {cat.display_order}
+              </p>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setEditing(cat)} aria-label="Editar">
               <Pencil />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleDelete(cat.id, cat.name)} aria-label="Excluir">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(cat.id, cat.name)}
+              aria-label="Excluir"
+            >
               <Trash2 />
             </Button>
           </div>
@@ -1136,7 +1480,10 @@ function CategoryEditor({
   }
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); onSave(form); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave(form);
+      }}
       className="grid gap-4 rounded-lg border border-border bg-card p-4 sm:p-6"
     >
       <div className="flex items-center justify-between gap-4">

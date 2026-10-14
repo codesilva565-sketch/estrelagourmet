@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS site_settings (
   contact_info TEXT NOT NULL DEFAULT '',
   order_info TEXT NOT NULL DEFAULT '',
   logo_url TEXT,
+  hero_images TEXT[] NOT NULL DEFAULT '{}',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
