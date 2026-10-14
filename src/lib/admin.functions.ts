@@ -108,10 +108,10 @@ export const getAdminCatalog = createServerFn({ method: "GET" })
               if (image.image_url.startsWith("http") || image.image_url.startsWith("/")) {
                 return { ...image, signed_url: image.image_url };
               }
-              const { data } = await context.supabase.storage
+              const { data } = context.supabase.storage
                 .from("catalog-images")
-                .createSignedUrl(image.image_url, 3600);
-              return { ...image, signed_url: data?.signedUrl ?? null };
+                .getPublicUrl(image.image_url);
+              return { ...image, signed_url: data.publicUrl };
             }),
         ),
         product_variations: (product.product_variations ?? []).sort(

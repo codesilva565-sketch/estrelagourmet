@@ -147,6 +147,14 @@ html {
   background: var(--rosa-clara);
 }
 
+.estrela-home .hamburguer span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--rosa-escuro);
+}
+
 .estrela-home .menu-mobile {
   position: absolute;
   z-index: 60;

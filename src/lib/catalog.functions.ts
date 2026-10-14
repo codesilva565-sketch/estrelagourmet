@@ -9,25 +9,19 @@ function isDemoMode() {
 
 async function signImagePaths<T extends { image_url: string }>(images: T[]) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return Promise.all(
-    images.map(async (image) => {
-      if (image.image_url.startsWith("http") || image.image_url.startsWith("/")) return image;
-      const { data } = await supabaseAdmin.storage
-        .from("catalog-images")
-        .createSignedUrl(image.image_url, 60 * 60);
-      return { ...image, image_url: data?.signedUrl ?? "" };
-    }),
-  );
+  return images.map((image) => {
+    if (image.image_url.startsWith("http") || image.image_url.startsWith("/")) return image;
+    const { data } = supabaseAdmin.storage.from("catalog-images").getPublicUrl(image.image_url);
+    return { ...image, image_url: data.publicUrl };
+  });
 }
 
 async function signCatalogPath(path: string | null): Promise<string | null> {
   if (!path) return path;
   if (path.startsWith("http") || path.startsWith("/")) return path;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.storage
-    .from("catalog-images")
-    .createSignedUrl(path, 60 * 60);
-  return data?.signedUrl ?? "";
+  const { data } = supabaseAdmin.storage.from("catalog-images").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export const getCatalog = createServerFn({ method: "GET" }).handler(
