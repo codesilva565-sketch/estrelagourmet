@@ -297,6 +297,7 @@ function HomePage() {
             Feitos com amor em Vicentina/MS — <Link to="/interesse">Minha lista</Link> ·{" "}
             <Link to="/admin">Área da proprietária</Link>
           </span>
+          <span className="rodape-credit">Criado por <a href="https://vicsolves.site" target="_blank" rel="noreferrer">Vic Solves</a></span>
         </footer>
       </div>
 

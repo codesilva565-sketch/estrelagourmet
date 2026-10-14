@@ -745,6 +745,23 @@ html {
   color: #fff;
 }
 
+.estrela-home .rodape-credit {
+  display: block;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #d9bcae;
+}
+
+.estrela-home .rodape-credit a {
+  color: #f3ddd2;
+}
+
+.estrela-home .rodape-credit a:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* ---------- WhatsApp flutuante ---------- */
 .estrela-home .zap-flutuante {
   position: fixed;
