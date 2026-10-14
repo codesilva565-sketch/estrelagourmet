@@ -11,7 +11,7 @@ async function signImagePaths<T extends { image_url: string }>(images: T[]) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return Promise.all(
     images.map(async (image) => {
-      if (image.image_url.startsWith("http")) return image;
+      if (image.image_url.startsWith("http") || image.image_url.startsWith("/")) return image;
       const { data } = await supabaseAdmin.storage
         .from("catalog-images")
         .createSignedUrl(image.image_url, 60 * 60);

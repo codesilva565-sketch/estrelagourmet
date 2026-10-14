@@ -31,12 +31,16 @@ export const Route = createFileRoute("/")({
 const MENSAGEM_GERAL =
   "Olá! Tenho interesse em brigadeiros gourmet. Poderia me passar mais informações, por favor?";
 
+const BANNER_PADRAO = "/assets/01-home/hero-principal-brigadeiros-caramelo-florais.jpg";
+const INTERVALO_CARROSSEL = 5000;
+
 function HomePage() {
   const data = Route.useLoaderData();
   const { items } = useInterest();
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<string | null>(null);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [slide, setSlide] = useState(0);
   const [demo, setDemo] = useState<DemoOverrides>({});
   const buscaRef = useRef<HTMLInputElement>(null);
 
@@ -48,10 +52,26 @@ function HomePage() {
   const digits = (demo.whatsapp_number ?? settings?.whatsapp_number ?? "").replace(/\D/g, "");
   const whatsapp = `https://wa.me/${digits}`;
   const whatsappGeral = `${whatsapp}?text=${encodeURIComponent(MENSAGEM_GERAL)}`;
-  const bannerImage =
-    demo.hero_images?.[0] ??
-    settings?.hero_images?.[0] ??
-    "/assets/01-home/hero-principal-brigadeiros-caramelo-florais.jpg";
+  const logoUrl = demo.logo_url ?? settings?.logo_url ?? null;
+
+  const heroImages = useMemo(() => {
+    const lista = (demo.hero_images?.length ? demo.hero_images : settings?.hero_images) ?? [];
+    const validas = lista.filter((imagem): imagem is string => Boolean(imagem));
+    return validas.length > 0 ? validas : [BANNER_PADRAO];
+  }, [demo.hero_images, settings?.hero_images]);
+
+  useEffect(() => {
+    setSlide(0);
+  }, [heroImages]);
+
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const id = window.setInterval(
+      () => setSlide((atual) => (atual + 1) % heroImages.length),
+      INTERVALO_CARROSSEL,
+    );
+    return () => window.clearInterval(id);
+  }, [heroImages.length]);
 
   const heroTitle =
     (demo.hero_title ?? settings?.hero_title ?? "").trim() || "Pequenos detalhes, grandes momentos";
@@ -89,8 +109,8 @@ function HomePage() {
       </div>
       <div className="loja">
         <header className="topo">
-          {demo.logo_url ? (
-            <img className="logo-eg-img" src={demo.logo_url} alt="Estrela Gourmet" />
+          {logoUrl ? (
+            <img className="logo-eg-img" src={logoUrl} alt="Estrela Gourmet" />
           ) : (
             <Link className="logo-eg" to="/" aria-label="Estrela Gourmet">
               EG
@@ -146,7 +166,25 @@ function HomePage() {
             </a>
           </div>
           <div className="hero-foto">
-            <img src={bannerImage} alt="Brigadeiros gourmet da Estrela Gourmet" />
+            <img
+              key={heroImages[slide]}
+              src={heroImages[slide]}
+              alt="Brigadeiros gourmet da Estrela Gourmet"
+            />
+            {heroImages.length > 1 && (
+              <div className="hero-dots" role="tablist" aria-label="Fotos de capa">
+                {heroImages.map((imagem, index) => (
+                  <button
+                    key={`${imagem}-${index}`}
+                    type="button"
+                    className={index === slide ? "active" : ""}
+                    aria-label={`Ver imagem ${index + 1}`}
+                    aria-selected={index === slide}
+                    onClick={() => setSlide(index)}
+                  />
+                ))}
+              </div>
+            )}
             <span className="selo">
               Feito com amor
               <br />

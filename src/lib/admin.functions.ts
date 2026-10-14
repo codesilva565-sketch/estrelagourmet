@@ -105,6 +105,9 @@ export const getAdminCatalog = createServerFn({ method: "GET" })
           (product.product_images ?? [])
             .sort((a, b) => a.display_order - b.display_order)
             .map(async (image) => {
+              if (image.image_url.startsWith("http") || image.image_url.startsWith("/")) {
+                return { ...image, signed_url: image.image_url };
+              }
               const { data } = await context.supabase.storage
                 .from("catalog-images")
                 .createSignedUrl(image.image_url, 3600);
@@ -198,12 +201,40 @@ export const deleteProductImage = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), path: z.string().min(1).max(500) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { error: storageError } = await context.supabase.storage
-      .from("catalog-images")
-      .remove([data.path]);
-    if (storageError) throw new Error(storageError.message);
+    if (!data.path.startsWith("http") && !data.path.startsWith("/")) {
+      const { error: storageError } = await context.supabase.storage
+        .from("catalog-images")
+        .remove([data.path]);
+      if (storageError) throw new Error(storageError.message);
+    }
     const { error } = await context.supabase.from("product_images").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setProductImageCover = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) =>
+    z.object({ id: z.string().uuid(), productId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: images, error } = await context.supabase
+      .from("product_images")
+      .select("id")
+      .eq("product_id", data.productId)
+      .order("display_order");
+    if (error) throw new Error(error.message);
+    const ordered = [
+      data.id,
+      ...(images ?? []).map((image) => image.id).filter((id) => id !== data.id),
+    ];
+    for (let index = 0; index < ordered.length; index++) {
+      const { error: updateError } = await context.supabase
+        .from("product_images")
+        .update({ display_order: index })
+        .eq("id", ordered[index]);
+      if (updateError) throw new Error(updateError.message);
+    }
     return { ok: true };
   });
 

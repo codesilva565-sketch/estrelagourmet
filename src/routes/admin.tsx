@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ArrowLeft,
+  BookOpen,
   Eye,
   EyeOff,
   ImagePlus,
@@ -13,6 +14,7 @@ import {
   Plus,
   Save,
   Settings,
+  Star,
   Store,
   Tags,
   Trash2,
@@ -45,6 +47,7 @@ import {
   saveSiteSettings,
   saveCategory,
   deleteCategory,
+  setProductImageCover,
 } from "@/lib/admin.functions";
 import type { Category, Product, ProductVariation, SiteSettings } from "@/lib/catalog.types";
 import { MOCK_CATALOG } from "@/lib/mock-catalog";
@@ -302,8 +305,12 @@ function Dashboard({
             alterações não são salvas.
           </div>
         )}
-        <Tabs defaultValue="products">
-          <TabsList className="grid h-11 w-full grid-cols-3 sm:w-auto">
+        <Tabs defaultValue="cardapio">
+          <TabsList className="grid h-11 w-full grid-cols-4 sm:w-auto">
+            <TabsTrigger value="cardapio">
+              <BookOpen className="mr-2 h-4 w-4" />
+              Cardápio
+            </TabsTrigger>
             <TabsTrigger value="products">
               <Store className="mr-2 h-4 w-4" />
               Produtos
@@ -317,6 +324,26 @@ function Dashboard({
               Config
             </TabsTrigger>
           </TabsList>
+          <TabsContent value="cardapio" className="mt-6">
+            {selected ? (
+              <ProductEditor
+                product={selected}
+                categories={data.categories}
+                onClose={() => setSelected(null)}
+                onSaved={async () => {
+                  await refresh();
+                  setSelected(null);
+                }}
+              />
+            ) : (
+              <MenuBoard
+                products={data.products}
+                categories={data.categories}
+                onSelect={setSelected}
+                onNew={() => setSelected(blankProduct())}
+              />
+            )}
+          </TabsContent>
           <TabsContent value="products" className="mt-6">
             {selected ? (
               <ProductEditor
@@ -409,6 +436,117 @@ function ProductList({
   );
 }
 
+function formatBRL(value: number | null): string {
+  if (value === null || value === undefined) return "Sob consulta";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function MenuBoard({
+  products,
+  categories,
+  onSelect,
+  onNew,
+}: {
+  products: AdminProduct[];
+  categories: Category[];
+  onSelect: (product: AdminProduct) => void;
+  onNew: () => void;
+}) {
+  const active = products.filter((product) => !product.is_archived);
+  const sortedCategories = categories.slice().sort((a, b) => a.display_order - b.display_order);
+  const groups = sortedCategories
+    .map((category) => ({
+      category,
+      items: active.filter((product) => product.category_id === category.id),
+    }))
+    .filter((group) => group.items.length > 0);
+  const semCategoria = active.filter(
+    (product) => !categories.some((category) => category.id === product.category_id),
+  );
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-display text-3xl font-semibold">Cardápio</h2>
+          <p className="text-sm text-muted-foreground">
+            Adicione doces e organize o que aparece no site.
+          </p>
+        </div>
+        <Button onClick={onNew}>
+          <Plus className="mr-2 h-4 w-4" /> Adicionar doce
+        </Button>
+      </div>
+
+      {active.length === 0 ? (
+        <div className="mt-6 border-y border-border py-16 text-center text-muted-foreground">
+          <p>Nenhum doce no cardápio ainda.</p>
+          <Button className="mt-4" onClick={onNew}>
+            <Plus className="mr-2 h-4 w-4" /> Adicionar doce
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-6 space-y-8">
+          {groups.map(({ category, items }) => (
+            <section key={category.id}>
+              <h3 className="mb-3 font-display text-xl font-semibold">{category.name}</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {items.map((product) => (
+                  <MenuCard key={product.id} product={product} onSelect={onSelect} />
+                ))}
+              </div>
+            </section>
+          ))}
+          {semCategoria.length > 0 && (
+            <section>
+              <h3 className="mb-3 font-display text-xl font-semibold">Sem categoria</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {semCategoria.map((product) => (
+                  <MenuCard key={product.id} product={product} onSelect={onSelect} />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuCard({
+  product,
+  onSelect,
+}: {
+  product: AdminProduct;
+  onSelect: (product: AdminProduct) => void;
+}) {
+  const image =
+    product.product_images[0]?.signed_url ?? product.product_images[0]?.image_url ?? null;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(product)}
+      className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/60"
+    >
+      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-secondary">
+        {image ? (
+          <img src={image} alt={product.name} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <ImagePlus className="h-5 w-5" />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium">{product.name}</p>
+        <p className="text-sm text-primary">{formatBRL(product.price)}</p>
+        {!product.is_available && <p className="text-xs text-muted-foreground">Indisponível</p>}
+      </div>
+      <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+
 function blankProduct(): AdminProduct {
   return {
     id: "",
@@ -445,6 +583,7 @@ function ProductEditor({
   const addImage = useServerFn(addProductImage);
   const addImageUrl = useServerFn(addProductImageUrl);
   const removeImage = useServerFn(deleteProductImage);
+  const setCover = useServerFn(setProductImageCover);
   const [form, setForm] = useState(product);
   const [features, setFeatures] = useState(product.features.join("\n"));
   const [busy, setBusy] = useState(false);
@@ -531,8 +670,8 @@ function ProductEditor({
   }
   async function uploadPendingFiles(productId: string) {
     if (pendingFiles.length === 0) return;
-    for (let i = 0; i < pendingFiles.length; i++) {
-      const file = pendingFiles[i];
+    let order = form.product_images.length;
+    for (const file of pendingFiles) {
       if (!file) continue;
       const path = await uploadImage(file, productId);
       await addImage({
@@ -540,9 +679,10 @@ function ProductEditor({
           productId,
           path,
           altText: form.name || "Produto",
-          displayOrder: i,
+          displayOrder: order,
         },
       });
+      order += 1;
     }
     pendingPreviews.forEach((p) => URL.revokeObjectURL(p));
     setPendingFiles([]);
@@ -579,38 +719,13 @@ function ProductEditor({
         },
       });
       const productId = result?.id ?? form.id;
-      if (isNew && productId) {
+      if (productId) {
         await uploadPendingFiles(productId);
       }
       toast.success("Produto salvo.");
       await onSaved();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function upload(files: FileList | null) {
-    if (!files || !form.id) return;
-    setBusy(true);
-    try {
-      for (const file of Array.from(files).slice(0, 8)) {
-        const error = validateFile(file);
-        if (error) throw new Error(error);
-        const path = await uploadImage(file, form.id);
-        await addImage({
-          data: {
-            productId: form.id,
-            path,
-            altText: form.name,
-            displayOrder: form.product_images.length,
-          },
-        });
-      }
-      toast.success("Fotos enviadas.");
-      await onSaved();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível enviar as fotos.");
     } finally {
       setBusy(false);
     }
@@ -623,6 +738,19 @@ function ProductEditor({
       await onSaved();
     } catch {
       toast.error("Não foi possível remover a foto.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function markCover(id: string) {
+    if (!form.id) return;
+    setBusy(true);
+    try {
+      await setCover({ data: { id, productId: form.id } });
+      toast.success("Capa atualizada.");
+      await onSaved();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível definir a capa.");
     } finally {
       setBusy(false);
     }
@@ -820,7 +948,7 @@ function ProductEditor({
         {/* Existing images */}
         {form.product_images.length > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {form.product_images.map((image) => (
+            {form.product_images.map((image, index) => (
               <div
                 key={image.id}
                 className="relative aspect-square overflow-hidden rounded-md bg-secondary"
@@ -830,6 +958,24 @@ function ProductEditor({
                   alt={image.alt_text}
                   className="h-full w-full object-cover"
                 />
+                {index === 0 ? (
+                  <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                    Capa
+                  </span>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute left-1 top-1 h-7 w-7"
+                    aria-label="Definir como capa"
+                    title="Definir como capa"
+                    disabled={busy}
+                    onClick={() => void markCover(image.id)}
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="destructive"
@@ -908,8 +1054,8 @@ function ProductEditor({
           </div>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Formatos: JPG, PNG, WEBP, AVIF. Máximo 8 MB por imagem.
-          {isNew && " As imagens serão enviadas ao salvar o produto."}
+          Formatos: JPG, PNG, WEBP, AVIF. Máximo 8 MB por imagem. As imagens serão enviadas ao
+          salvar o produto.
         </p>
       </section>
     </form>
@@ -1166,6 +1312,35 @@ function SettingsForm({
     }
   }
 
+  async function setHeroCover(index: number) {
+    if (index <= 0) return;
+    const newPaths = [heroPaths[index], ...heroPaths.filter((_, i) => i !== index)];
+    setBusy(true);
+    try {
+      if (DEMO_MODE) {
+        writeDemoOverrides({ hero_images: newPaths });
+        setHeroPaths(newPaths);
+        setHeroDisplay(newPaths);
+      } else {
+        await save({
+          data: {
+            ...form,
+            whatsapp_number: form.whatsapp_number.replace(/\D/g, ""),
+            hero_images: newPaths,
+          },
+        });
+        setHeroPaths(newPaths);
+        setHeroDisplay(newPaths.map((path) => publicStorageUrl(path) ?? ""));
+      }
+      await onSaved();
+      toast.success("Capa principal atualizada.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao definir a capa.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function handleRemovePendingHero(index: number) {
     const preview = heroPreviews[index];
     if (preview) URL.revokeObjectURL(preview);
@@ -1321,6 +1496,24 @@ function SettingsForm({
               className="relative aspect-video overflow-hidden rounded-md bg-secondary"
             >
               <img src={preview} alt={`Capa ${index + 1}`} className="h-full w-full object-cover" />
+              {index === 0 ? (
+                <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                  Capa
+                </span>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="absolute left-1 top-1 h-7 w-7"
+                  aria-label="Definir como capa"
+                  title="Definir como capa"
+                  onClick={() => void setHeroCover(index)}
+                  disabled={busy}
+                >
+                  <Star className="h-3.5 w-3.5" />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="destructive"
