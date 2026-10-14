@@ -1,19 +1,20 @@
 const KEY = "eg-admin-auth";
-const PASSWORD = import.meta.env["VITE_ADMIN_PASSWORD"] ?? "estrela123";
 
-export function isAdminAuthed(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.sessionStorage.getItem(KEY) === "1";
+export function getAdminToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem(KEY);
 }
 
-export function loginAdmin(password: string): boolean {
-  if (password === PASSWORD) {
-    window.sessionStorage.setItem(KEY, "1");
-    return true;
-  }
-  return false;
+export function isAdminAuthed(): boolean {
+  return getAdminToken() !== null;
+}
+
+export function setAdminToken(token: string): void {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(KEY, token);
 }
 
 export function logoutAdmin(): void {
-  if (typeof window !== "undefined") window.sessionStorage.removeItem(KEY);
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(KEY);
 }

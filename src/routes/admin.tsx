@@ -37,6 +37,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   addProductImage,
   addProductImageUrl,
+  adminLogin,
+  createImageUploadTarget,
   deleteProductImage,
   getAdminCatalog,
   saveProduct,
@@ -46,7 +48,7 @@ import {
 } from "@/lib/admin.functions";
 import type { Category, Product, ProductVariation, SiteSettings } from "@/lib/catalog.types";
 import { MOCK_CATALOG } from "@/lib/mock-catalog";
-import { isAdminAuthed, loginAdmin, logoutAdmin } from "@/lib/admin-auth";
+import { isAdminAuthed, logoutAdmin, setAdminToken } from "@/lib/admin-auth";
 import { fileToDataUrl, readDemoOverrides, writeDemoOverrides } from "@/lib/demo-store";
 
 export const Route = createFileRoute("/admin")({
@@ -158,20 +160,23 @@ function AuthenticatedAdmin({ onSignOut }: { onSignOut: () => Promise<void> }) {
 }
 
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+  const login = useServerFn(adminLogin);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  function submit(event: React.FormEvent) {
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError("");
-    if (loginAdmin(password)) {
+    try {
+      const { token } = await login({ data: { password } });
+      setAdminToken(token);
       onSuccess();
-      return;
+    } catch {
+      setError("Senha incorreta. Tente novamente.");
+      setBusy(false);
     }
-    setError("Senha incorreta. Tente novamente.");
-    setBusy(false);
   }
   return (
     <main className="grid min-h-screen place-items-center bg-secondary px-4 py-10">
@@ -528,12 +533,8 @@ function ProductEditor({
     if (pendingFiles.length === 0) return;
     for (let i = 0; i < pendingFiles.length; i++) {
       const file = pendingFiles[i];
-      const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const path = `${productId}/${crypto.randomUUID()}.${extension}`;
-      const { error } = await supabase.storage
-        .from("catalog-images")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (error) throw error;
+      if (!file) continue;
+      const path = await uploadImage(file, productId);
       await addImage({
         data: {
           productId,
@@ -596,12 +597,7 @@ function ProductEditor({
       for (const file of Array.from(files).slice(0, 8)) {
         const error = validateFile(file);
         if (error) throw new Error(error);
-        const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-        const path = `${form.id}/${crypto.randomUUID()}.${extension}`;
-        const { error: uploadError } = await supabase.storage
-          .from("catalog-images")
-          .upload(path, file, { contentType: file.type, upsert: false });
-        if (uploadError) throw uploadError;
+        const path = await uploadImage(file, form.id);
         await addImage({
           data: {
             productId: form.id,
@@ -920,11 +916,37 @@ function ProductEditor({
   );
 }
 
-async function signStoragePath(path: string | null): Promise<string | null> {
+function publicStorageUrl(path: string | null): string | null {
   if (!path) return path;
   if (path.startsWith("http") || path.startsWith("/")) return path;
-  const { data } = await supabase.storage.from("catalog-images").createSignedUrl(path, 3600);
-  return data?.signedUrl ?? "";
+  const { data } = supabase.storage.from("catalog-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+type UploadExtension = "jpg" | "jpeg" | "png" | "webp" | "avif";
+
+function extensionFor(file: File): UploadExtension {
+  switch (file.type) {
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/avif":
+      return "avif";
+    default:
+      return "jpg";
+  }
+}
+
+async function uploadImage(file: File, folder: string): Promise<string> {
+  const target = await createImageUploadTarget({
+    data: { folder, extension: extensionFor(file) },
+  });
+  const { error } = await supabase.storage
+    .from("catalog-images")
+    .uploadToSignedUrl(target.path, target.token, file, { contentType: file.type });
+  if (error) throw error;
+  return target.path;
 }
 
 function SettingsForm({
@@ -965,22 +987,9 @@ function SettingsForm({
       setHeroDisplay(o.hero_images ?? []);
       return;
     }
-    let active = true;
-    void (async () => {
-      const [logo, heroes] = await Promise.all([
-        signStoragePath(settings?.logo_url ?? null),
-        Promise.all(
-          (settings?.hero_images ?? []).map(async (p) => (await signStoragePath(p)) ?? ""),
-        ),
-      ]);
-      if (!active) return;
-      setLogoPreview(logo);
-      setHeroPaths(settings?.hero_images ?? []);
-      setHeroDisplay(heroes);
-    })();
-    return () => {
-      active = false;
-    };
+    setLogoPreview(publicStorageUrl(settings?.logo_url ?? null));
+    setHeroPaths(settings?.hero_images ?? []);
+    setHeroDisplay((settings?.hero_images ?? []).map((p) => publicStorageUrl(p) ?? ""));
   }, [settings]);
 
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1036,17 +1045,12 @@ function SettingsForm({
         toast.success("Logo atualizado (modo demonstração).");
         return;
       }
-      const extension = logoPending.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const path = `site/logo/${crypto.randomUUID()}.${extension}`;
-      const { error } = await supabase.storage
-        .from("catalog-images")
-        .upload(path, logoPending, { contentType: logoPending.type, upsert: false });
-      if (error) throw error;
+      const path = await uploadImage(logoPending, "site/logo");
       await save({
         data: { ...form, whatsapp_number: form.whatsapp_number.replace(/\D/g, ""), logo_url: path },
       });
       setLogoPending(null);
-      setLogoPreview(await signStoragePath(path));
+      setLogoPreview(publicStorageUrl(path));
       await onSaved();
       toast.success("Logo atualizado.");
     } catch (error) {
@@ -1075,13 +1079,7 @@ function SettingsForm({
       }
       const newPaths: string[] = [];
       for (const file of heroPending) {
-        const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-        const path = `site/hero/${crypto.randomUUID()}.${extension}`;
-        const { error } = await supabase.storage
-          .from("catalog-images")
-          .upload(path, file, { contentType: file.type, upsert: false });
-        if (error) throw error;
-        newPaths.push(path);
+        newPaths.push(await uploadImage(file, "site/hero"));
       }
       const updatedPaths = [...heroPaths, ...newPaths];
       await save({
@@ -1091,9 +1089,7 @@ function SettingsForm({
           hero_images: updatedPaths,
         },
       });
-      const newPreviews = await Promise.all(
-        newPaths.map(async (p) => (await signStoragePath(p)) ?? ""),
-      );
+      const newPreviews = newPaths.map((p) => publicStorageUrl(p) ?? "");
       setHeroPaths(updatedPaths);
       setHeroDisplay((prev) => [...prev, ...newPreviews]);
       heroPreviews.forEach((p) => URL.revokeObjectURL(p));

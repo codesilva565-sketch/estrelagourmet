@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAdmin } from "@/lib/admin-guard";
 import type { Database } from "@/integrations/supabase/types";
 
 const nullablePrice = z.number().nonnegative().max(999999).nullable();
@@ -49,20 +48,41 @@ const settingsSchema = z.object({
   hero_subtitle: z.string().trim().max(240).optional(),
 });
 
-async function assertAdmin(supabase: SupabaseClient<Database>, userId: string) {
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (error || !data) throw new Error("Acesso restrito à proprietária.");
-}
+export const adminLogin = createServerFn({ method: "POST" })
+  .inputValidator((input) => z.object({ password: z.string().min(1).max(128) }).parse(input))
+  .handler(async ({ data }) => {
+    const { adminPassword, createAdminToken } = await import("@/lib/admin-session.server");
+    if (data.password !== adminPassword()) {
+      throw new Error("Senha incorreta.");
+    }
+    return { token: createAdminToken() };
+  });
+
+const uploadTargetSchema = z.object({
+  folder: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9][a-z0-9/_-]*$/)
+    .max(120),
+  extension: z.enum(["jpg", "jpeg", "png", "webp", "avif"]),
+});
+
+export const createImageUploadTarget = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
+  .inputValidator((input) => uploadTargetSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const path = `${data.folder}/${crypto.randomUUID()}.${data.extension}`;
+    const { data: signed, error } = await context.supabase.storage
+      .from("catalog-images")
+      .createSignedUploadUrl(path);
+    if (error || !signed)
+      throw new Error(error?.message ?? "Não foi possível preparar o envio da imagem.");
+    return { path, token: signed.token };
+  });
 
 export const getAdminCatalog = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .handler(async ({ context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const [
       { data: products, error: productsError },
       { data: categories, error: categoriesError },
@@ -100,10 +120,9 @@ export const getAdminCatalog = createServerFn({ method: "GET" })
   });
 
 export const saveProduct = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) => productSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { id, variations, ...values } = data;
     const result = id
       ? await context.supabase.from("products").update(values).eq("id", id).select("id").single()
@@ -128,7 +147,7 @@ export const saveProduct = createServerFn({ method: "POST" })
   });
 
 export const addProductImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) =>
     z
       .object({
@@ -140,7 +159,6 @@ export const addProductImage = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { error } = await context.supabase.from("product_images").insert({
       product_id: data.productId,
       image_url: data.path,
@@ -152,7 +170,7 @@ export const addProductImage = createServerFn({ method: "POST" })
   });
 
 export const addProductImageUrl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) =>
     z
       .object({
@@ -164,7 +182,6 @@ export const addProductImageUrl = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { error } = await context.supabase.from("product_images").insert({
       product_id: data.productId,
       image_url: data.imageUrl,
@@ -176,12 +193,11 @@ export const addProductImageUrl = createServerFn({ method: "POST" })
   });
 
 export const deleteProductImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) =>
     z.object({ id: z.string().uuid(), path: z.string().min(1).max(500) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { error: storageError } = await context.supabase.storage
       .from("catalog-images")
       .remove([data.path]);
@@ -192,10 +208,9 @@ export const deleteProductImage = createServerFn({ method: "POST" })
   });
 
 export const saveSiteSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) => settingsSchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { hero_images, logo_url, hero_title, hero_subtitle, ...rest } = data;
     const updateData: Database["public"]["Tables"]["site_settings"]["Update"] = { ...rest };
     if (logo_url !== undefined) updateData.logo_url = logo_url;
@@ -208,7 +223,7 @@ export const saveSiteSettings = createServerFn({ method: "POST" })
   });
 
 export const uploadSiteImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) =>
     z
       .object({
@@ -219,7 +234,6 @@ export const uploadSiteImage = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { type, file, altText } = data;
     const extension = file.split(".").pop()?.toLowerCase() ?? "jpg";
     const path = `site/${type}/${crypto.randomUUID()}.${extension}`;
@@ -235,7 +249,7 @@ export const uploadSiteImage = createServerFn({ method: "POST" })
   });
 
 export const deleteSiteImage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) =>
     z
       .object({
@@ -245,7 +259,6 @@ export const deleteSiteImage = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { path } = data;
     const { error } = await context.supabase.storage.from("catalog-images").remove([path]);
     if (error) throw new Error(error.message);
@@ -265,10 +278,9 @@ const categorySchema = z.object({
 });
 
 export const saveCategory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) => categorySchema.parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { id, ...values } = data;
     const result = id
       ? await context.supabase.from("categories").update(values).eq("id", id).select("id").single()
@@ -279,10 +291,9 @@ export const saveCategory = createServerFn({ method: "POST" })
   });
 
 export const deleteCategory = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireAdmin])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase, context.userId);
     const { error } = await context.supabase.from("categories").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };

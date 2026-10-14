@@ -5,7 +5,6 @@ services:
       args:
         # VITE_* sao embutidas no bundle do cliente em tempo de build
         VITE_DEMO_MODE: "false"
-        VITE_ADMIN_PASSWORD: "${ADMIN_PASSWORD:-estrela123}"
         VITE_SUPABASE_URL: "${SUPABASE_URL}"
         VITE_SUPABASE_PUBLISHABLE_KEY: "${SUPABASE_PUBLISHABLE_KEY}"
     image: estrela-gourmet:latest
